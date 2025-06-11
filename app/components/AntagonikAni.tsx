@@ -328,7 +328,7 @@ const AntagonikAni: React.FC<AntagonikAniProps> = ({
     wallsRef.current = { left: leftWall, right: rightWall };
 
     // Crear esferas con colores específicos y tamaños variables
-    const spheres = [];
+    const spheres: Matter.Body[] = [];
     
     // Reducimos aún más el intervalo de caída para que las esferas caigan más juntas
     // Dividimos por el factor de velocidad para acelerar la secuencia
