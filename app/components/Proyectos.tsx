@@ -6,8 +6,32 @@ import CircularRotatingText from './RotatingText';
 import Encabezado from './Encabezado';
 import { gsap, ScrollTrigger } from "@/lib/gsapInit";
 
-const Proyectos = () => {
-  const projectsData = [
+// Interfaces para tipado
+interface ProjectData {
+  images: string[];
+  title: string;
+  tags: string[];
+  year: string;
+}
+
+interface ParallaxImageProps {
+  src: string;
+  alt: string;
+}
+
+interface ProjectCardProps {
+  project: ProjectData;
+  index: number;
+}
+
+// Extensión del HTMLElement para agregar propiedades personalizadas
+interface HTMLElementWithHandlers extends HTMLElement {
+  _mouseEnterHandler?: () => void;
+  _mouseLeaveHandler?: () => void;
+}
+
+const Proyectos: React.FC = () => {
+  const projectsData: ProjectData[] = [
     {
       images: ["/images/proyectos/proyecto1.webp"],
       title: "Sisawiru",
@@ -35,22 +59,22 @@ const Proyectos = () => {
   ];
 
   // Referencia para el contenedor principal de proyectos
-  const projectsContainerRef = useRef(null);
+  const projectsContainerRef = useRef<HTMLElement>(null);
 
   // Referencia para almacenar el contexto de animación
-  const animationContextRef = useRef(null);
+  const animationContextRef = useRef<gsap.Context | null>(null);
 
   // Referencia para almacenar ScrollTriggers
-  const scrollTriggersRef = useRef([]);
+  const scrollTriggersRef = useRef<ScrollTrigger[]>([]);
 
   // Estado para manejar la inicialización
-  const [isReady, setIsReady] = useState(false);
+  const [isReady, setIsReady] = useState<boolean>(false);
 
   // Hook para detectar cambios de ruta en Next.js
   const pathname = usePathname();
 
   // Función para limpiar animaciones existentes
-  const cleanupAnimations = () => {
+  const cleanupAnimations = (): void => {
     // Limpiar ScrollTriggers específicos de este componente
     scrollTriggersRef.current.forEach(trigger => {
       if (trigger && trigger.kill) {
@@ -67,24 +91,25 @@ const Proyectos = () => {
   };
 
   // Función para configurar animaciones hover
-  const setupHoverAnimations = () => {
+  const setupHoverAnimations = (): void => {
     if (!projectsContainerRef.current) return;
 
     const projectCards = projectsContainerRef.current.querySelectorAll('.project-card');
 
     projectCards.forEach((card) => {
-      const image = card.querySelector('.project-image');
+      const cardElement = card as HTMLElementWithHandlers;
+      const image = card.querySelector('.project-image') as HTMLElement;
 
       // Remover handlers anteriores si existen
-      if (card._mouseEnterHandler) {
-        card.removeEventListener('mouseenter', card._mouseEnterHandler);
+      if (cardElement._mouseEnterHandler) {
+        cardElement.removeEventListener('mouseenter', cardElement._mouseEnterHandler);
       }
-      if (card._mouseLeaveHandler) {
-        card.removeEventListener('mouseleave', card._mouseLeaveHandler);
+      if (cardElement._mouseLeaveHandler) {
+        cardElement.removeEventListener('mouseleave', cardElement._mouseLeaveHandler);
       }
 
       // Crear nuevos handlers
-      const handleMouseEnter = () => {
+      const handleMouseEnter = (): void => {
         gsap.to(image, {
           scale: 1.1,
           duration: 0.8,
@@ -92,7 +117,7 @@ const Proyectos = () => {
         });
       };
 
-      const handleMouseLeave = () => {
+      const handleMouseLeave = (): void => {
         gsap.to(image, {
           scale: 1,
           duration: 0.8,
@@ -101,17 +126,17 @@ const Proyectos = () => {
       };
 
       // Guardar referencias a los handlers
-      card._mouseEnterHandler = handleMouseEnter;
-      card._mouseLeaveHandler = handleMouseLeave;
+      cardElement._mouseEnterHandler = handleMouseEnter;
+      cardElement._mouseLeaveHandler = handleMouseLeave;
 
       // Agregar event listeners
-      card.addEventListener('mouseenter', handleMouseEnter);
-      card.addEventListener('mouseleave', handleMouseLeave);
+      cardElement.addEventListener('mouseenter', handleMouseEnter);
+      cardElement.addEventListener('mouseleave', handleMouseLeave);
     });
   };
 
   // Función para inicializar animaciones
-  const setupAnimations = () => {
+  const setupAnimations = (): void => {
     if (!projectsContainerRef.current || !isReady) return;
 
     // Limpiar animaciones previas
@@ -120,10 +145,10 @@ const Proyectos = () => {
     // Crear nuevo contexto GSAP
     animationContextRef.current = gsap.context(() => {
       // Animaciones para líneas de proyecto
-      const lines = projectsContainerRef.current.querySelectorAll('.project-line');
+      const lines = projectsContainerRef.current!.querySelectorAll('.project-line');
       lines.forEach((line) => {
         const lineTrigger = ScrollTrigger.create({
-          trigger: line,
+          trigger: line as Element,
           start: "top 90%",
           end: "bottom 10%",
           toggleActions: "play none none reverse",
@@ -138,10 +163,10 @@ const Proyectos = () => {
       });
 
       // Animaciones para títulos de proyecto
-      const projectTitles = projectsContainerRef.current.querySelectorAll('.project-title');
+      const projectTitles = projectsContainerRef.current!.querySelectorAll('.project-title');
       projectTitles.forEach((title) => {
         const titleTrigger = ScrollTrigger.create({
-          trigger: title.closest('.project-card'),
+          trigger: title.closest('.project-card') as Element,
           start: "top 60%",
           toggleActions: "play none none reverse",
           animation: gsap.fromTo(
@@ -154,10 +179,10 @@ const Proyectos = () => {
       });
 
       // Animaciones para etiquetas de proyecto
-      const projectTags = projectsContainerRef.current.querySelectorAll('.project-tags');
+      const projectTags = projectsContainerRef.current!.querySelectorAll('.project-tags');
       projectTags.forEach((tags) => {
         const tagsTrigger = ScrollTrigger.create({
-          trigger: tags.closest('.project-card'),
+          trigger: tags.closest('.project-card') as Element,
           start: "top 60%",
           toggleActions: "play none none reverse",
           animation: gsap.fromTo(
@@ -169,11 +194,11 @@ const Proyectos = () => {
         scrollTriggersRef.current.push(tagsTrigger);
       });
 
-      // Animaciones для año de proyecto
-      const projectYears = projectsContainerRef.current.querySelectorAll('.project-year');
+      // Animaciones para año de proyecto
+      const projectYears = projectsContainerRef.current!.querySelectorAll('.project-year');
       projectYears.forEach((year) => {
         const yearTrigger = ScrollTrigger.create({
-          trigger: year.closest('.project-card'),
+          trigger: year.closest('.project-card') as Element,
           start: "top 60%",
           toggleActions: "play none none reverse",
           animation: gsap.fromTo(
@@ -186,11 +211,11 @@ const Proyectos = () => {
       });
 
       // Configuración de parallax para imágenes
-      const parallaxImages = projectsContainerRef.current.querySelectorAll('.parallax-image-wrapper');
+      const parallaxImages = projectsContainerRef.current!.querySelectorAll('.parallax-image-wrapper');
       parallaxImages.forEach((wrapper) => {
         const container = wrapper.closest('.parallax-container');
         const parallaxTrigger = ScrollTrigger.create({
-          trigger: container,
+          trigger: container as Element,
           start: "top bottom",
           end: "bottom top",
           scrub: true,
@@ -239,7 +264,7 @@ const Proyectos = () => {
   useEffect(() => {
     if (!isReady) return;
 
-    const handleVisibilityChange = () => {
+    const handleVisibilityChange = (): void => {
       if (document.visibilityState === 'visible') {
         // Refrescar animaciones cuando la página vuelve a ser visible
         ScrollTrigger.refresh();
@@ -253,7 +278,7 @@ const Proyectos = () => {
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     // Event listener para cambios de ruta con Next.js
-    const handleRouteChange = () => {
+    const handleRouteChange = (): void => {
       setTimeout(() => {
         ScrollTrigger.refresh();
         setupAnimations();
@@ -269,33 +294,33 @@ const Proyectos = () => {
     };
   }, [isReady]);
 
-  const ParallaxImage = ({ src, alt }) => {
-    const containerRef = useRef(null);
-    const buttonRef = useRef(null);
-    const [showButton, setShowButton] = useState(false);
+  const ParallaxImage: React.FC<ParallaxImageProps> = ({ src, alt }) => {
+    const containerRef = useRef<HTMLDivElement>(null);
+    const buttonRef = useRef<HTMLDivElement>(null);
+    const [showButton, setShowButton] = useState<boolean>(false);
 
     // Referencias para el seguimiento del cursor
-    const mousePosition = useRef({ x: 0, y: 0 });
-    const buttonPosition = useRef({ x: 0, y: 0 });
-    const animationFrameRef = useRef(null);
+    const mousePosition = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+    const buttonPosition = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+    const animationFrameRef = useRef<number | null>(null);
 
     // Referencias para controlar las animaciones GSAP
-    const currentAnimationRef = useRef(null);
+    const currentAnimationRef = useRef<gsap.core.Tween | null>(null);
 
     // Referencia para almacenar la última posición del cursor en viewport
-    const lastViewportPosition = useRef({ x: 0, y: 0 });
+    const lastViewportPosition = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
     // Nueva referencia para trackear si el cursor está dentro del elemento
-    const isMouseInside = useRef(false);
+    const isMouseInside = useRef<boolean>(false);
 
     // Nueva referencia para detectar si estamos en scroll
-    const isScrolling = useRef(false);
+    const isScrolling = useRef<boolean>(false);
 
     // Referencia para el timeout de scroll
-    const scrollTimeoutRef = useRef(null);
+    const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     // Función mejorada para calcular la posición relativa
-    const updateRelativePosition = (viewportX, viewportY) => {
+    const updateRelativePosition = (viewportX: number, viewportY: number): boolean => {
       if (!containerRef.current) return false;
 
       const rect = containerRef.current.getBoundingClientRect();
@@ -314,13 +339,13 @@ const Proyectos = () => {
     };
 
     // Función optimizada para animar el botón hacia la posición del cursor
-    const animateButtonPosition = () => {
+    const animateButtonPosition = (): void => {
       if (!buttonRef.current || !showButton || !isMouseInside.current) {
         animationFrameRef.current = null;
         return;
       }
 
-      const lerp = (start, end, factor) => start + (end - start) * factor;
+      const lerp = (start: number, end: number, factor: number): number => start + (end - start) * factor;
       // Velocidad más rápida durante el scroll para mejor respuesta
       const ease = isScrolling.current ? 0.6 : 0.2;
 
@@ -345,7 +370,7 @@ const Proyectos = () => {
       }
     };
 
-    const handleMouseMove = (e) => {
+    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>): void => {
       // Actualizar siempre la última posición del viewport
       lastViewportPosition.current = {
         x: e.clientX,
@@ -361,7 +386,7 @@ const Proyectos = () => {
     };
 
     // Función mejorada para manejar el scroll
-    const handleScroll = () => {
+    const handleScroll = (): void => {
       if (!showButton || !isMouseInside.current || !containerRef.current) {
         return;
       }
@@ -398,7 +423,7 @@ const Proyectos = () => {
       }, 150);
     };
 
-    const handleMouseEnter = (e) => {
+    const handleMouseEnter = (e: React.MouseEvent<HTMLDivElement>): void => {
       if (!containerRef.current) return;
 
       // Marcar que el cursor está dentro
@@ -456,7 +481,7 @@ const Proyectos = () => {
       }
     }, [showButton]);
 
-    const handleMouseLeave = () => {
+    const handleMouseLeave = (): void => {
       // Marcar que el cursor ya no está dentro
       isMouseInside.current = false;
       isScrolling.current = false;
@@ -571,7 +596,7 @@ const Proyectos = () => {
     );
   };
 
-  const ProjectCard = ({ project, index }) => (
+  const ProjectCard: React.FC<ProjectCardProps> = ({ project, index }) => (
     <div className="project-card flex flex-col h-full shadow-lg cursor-pointer" style={{ position: 'relative', overflow: 'visible' }}>
       <ParallaxImage src={project.images[0]} alt={`${project.title} Image`} />
       <div className="pt-5 pb-1 flex-grow flex items-center justify-between">
@@ -638,9 +663,9 @@ const Proyectos = () => {
             <div className="col-span-1 md:col-span-3 lg:col-span-2 w-full">
               <ProjectCard project={projectsData[3]} index={3} />
             </div>
-<div className="col-span-1 md:hidden lg:block lg:col-span-2 pt-4 md:pt-0 w-full relative h-auto lg:h-full 2xl:max-h-[500px] 2xl:aspect-square flex items-center justify-center">
-  <CircularRotatingText />
-</div>
+            <div className="col-span-1 md:hidden lg:block lg:col-span-2 pt-4 md:pt-0 w-full relative h-auto lg:h-full 2xl:max-h-[500px] 2xl:aspect-square flex items-center justify-center">
+              <CircularRotatingText />
+            </div>
           </div>
         </div>
       </div>
