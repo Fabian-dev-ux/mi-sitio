@@ -1,0 +1,16 @@
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  output: 'export', // Necesario para generar sitio estático
+  trailingSlash: true, // Mejora compatibilidad con hosting estático
+  images: {
+    unoptimized: true // Necesario para export estático
+  },
+  serverExternalPackages: ["sharp"], // Mantén esto si procesas imágenes
+  experimental: {
+    turbo: {
+      // Opciones específicas de Turbopack (si las necesitas)
+    }
+  }
+};
+
+module.exports = nextConfig;

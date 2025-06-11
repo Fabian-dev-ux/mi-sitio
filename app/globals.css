@@ -1,0 +1,67 @@
+/* globals.css */
+
+/* Tailwind CSS */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Importa Poppins con varios pesos desde Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+/* Fuente Clash Display (alojada localmente) */
+@font-face {
+  font-family: 'Clash Display';
+  src: url('/fonts/ClashDisplay-Extralight.woff2') format('woff2');
+  font-weight: 200; /* ExtraLight */
+}
+
+@font-face {
+  font-family: 'Clash Display';
+  src: url('/fonts/ClashDisplay-Light.woff2') format('woff2');
+  font-weight: 300; /* Light */
+}
+
+@font-face {
+  font-family: 'Clash Display';
+  src: url('/fonts/ClashDisplay-Regular.woff2') format('woff2');
+  font-weight: 400; /* Regular */
+}
+
+@font-face {
+  font-family: 'Clash Display';
+  src: url('/fonts/ClashDisplay-Medium.woff2') format('woff2');
+  font-weight: 500; /* Medium */
+}
+
+@font-face {
+  font-family: 'Clash Display';
+  src: url('/fonts/ClashDisplay-Semibold.woff2') format('woff2');
+  font-weight: 600; /* SemiBold */
+}
+
+@font-face {
+  font-family: 'Clash Display';
+  src: url('/fonts/ClashDisplay-Bold.woff2') format('woff2');
+  font-weight: 700; /* Bold */
+}
+
+/* Fuente Archivo Variable (alojada localmente) */
+@font-face {
+  font-family: 'Archivo';
+  src: url('/fonts/archivo/Archivo-VariableFont_wdth,wght.ttf') format('truetype');
+  font-weight: 100 900;  /* Define el rango de peso */
+  font-stretch: 75% 125%; /* Define el rango de ancho (si aplica) */
+  font-display: swap;
+}
+
+/* Estilos globales */
+html, body {
+  scroll-behavior: auto;
+  overscroll-behavior-y: none;
+}
+
+body {
+  overflow-x: hidden; 
+  
+}
+

@@ -1,0 +1,651 @@
+"use client";
+import React, { useRef, useEffect, useState, useLayoutEffect } from 'react';
+import Image from 'next/image';
+import { usePathname } from 'next/navigation';
+import CircularRotatingText from './RotatingText';
+import Encabezado from './Encabezado';
+import { gsap, ScrollTrigger } from "@/lib/gsapInit";
+
+const Proyectos = () => {
+  const projectsData = [
+    {
+      images: ["/images/proyectos/proyecto1.webp"],
+      title: "Sisawiru",
+      tags: ["Branding", "Packaging"],
+      year: "/2024"
+    },
+    {
+      images: ["/images/proyectos/proyecto2.webp"],
+      title: "593 SECURITY",
+      tags: ["UX", "UI", "Webflow"],
+      year: "/2025"
+    },
+    {
+      images: ["/images/proyectos/proyecto3.webp"],
+      title: "LOGOFOLIO",
+      tags: ["Identidad visual", "Logo design"],
+      year: "/2023"
+    },
+    {
+      images: ["/images/proyectos/proyecto4.webp"],
+      title: "YOKUN",
+      tags: ["Branding", "Identidad visual"],
+      year: "/2025"
+    }
+  ];
+
+  // Referencia para el contenedor principal de proyectos
+  const projectsContainerRef = useRef(null);
+
+  // Referencia para almacenar el contexto de animación
+  const animationContextRef = useRef(null);
+
+  // Referencia para almacenar ScrollTriggers
+  const scrollTriggersRef = useRef([]);
+
+  // Estado para manejar la inicialización
+  const [isReady, setIsReady] = useState(false);
+
+  // Hook para detectar cambios de ruta en Next.js
+  const pathname = usePathname();
+
+  // Función para limpiar animaciones existentes
+  const cleanupAnimations = () => {
+    // Limpiar ScrollTriggers específicos de este componente
+    scrollTriggersRef.current.forEach(trigger => {
+      if (trigger && trigger.kill) {
+        trigger.kill();
+      }
+    });
+    scrollTriggersRef.current = [];
+
+    // Revertir el contexto de animación si existe
+    if (animationContextRef.current) {
+      animationContextRef.current.revert();
+      animationContextRef.current = null;
+    }
+  };
+
+  // Función para configurar animaciones hover
+  const setupHoverAnimations = () => {
+    if (!projectsContainerRef.current) return;
+
+    const projectCards = projectsContainerRef.current.querySelectorAll('.project-card');
+
+    projectCards.forEach((card) => {
+      const image = card.querySelector('.project-image');
+
+      // Remover handlers anteriores si existen
+      if (card._mouseEnterHandler) {
+        card.removeEventListener('mouseenter', card._mouseEnterHandler);
+      }
+      if (card._mouseLeaveHandler) {
+        card.removeEventListener('mouseleave', card._mouseLeaveHandler);
+      }
+
+      // Crear nuevos handlers
+      const handleMouseEnter = () => {
+        gsap.to(image, {
+          scale: 1.1,
+          duration: 0.8,
+          ease: "power2.out"
+        });
+      };
+
+      const handleMouseLeave = () => {
+        gsap.to(image, {
+          scale: 1,
+          duration: 0.8,
+          ease: "power2.out"
+        });
+      };
+
+      // Guardar referencias a los handlers
+      card._mouseEnterHandler = handleMouseEnter;
+      card._mouseLeaveHandler = handleMouseLeave;
+
+      // Agregar event listeners
+      card.addEventListener('mouseenter', handleMouseEnter);
+      card.addEventListener('mouseleave', handleMouseLeave);
+    });
+  };
+
+  // Función para inicializar animaciones
+  const setupAnimations = () => {
+    if (!projectsContainerRef.current || !isReady) return;
+
+    // Limpiar animaciones previas
+    cleanupAnimations();
+
+    // Crear nuevo contexto GSAP
+    animationContextRef.current = gsap.context(() => {
+      // Animaciones para líneas de proyecto
+      const lines = projectsContainerRef.current.querySelectorAll('.project-line');
+      lines.forEach((line) => {
+        const lineTrigger = ScrollTrigger.create({
+          trigger: line,
+          start: "top 90%",
+          end: "bottom 10%",
+          toggleActions: "play none none reverse",
+          markers: false,
+          animation: gsap.fromTo(
+            line,
+            { scaleX: 0, transformOrigin: "left center" },
+            { scaleX: 1, duration: 1.2, ease: "power2.out" }
+          )
+        });
+        scrollTriggersRef.current.push(lineTrigger);
+      });
+
+      // Animaciones para títulos de proyecto
+      const projectTitles = projectsContainerRef.current.querySelectorAll('.project-title');
+      projectTitles.forEach((title) => {
+        const titleTrigger = ScrollTrigger.create({
+          trigger: title.closest('.project-card'),
+          start: "top 60%",
+          toggleActions: "play none none reverse",
+          animation: gsap.fromTo(
+            title,
+            { y: 30, opacity: 0 },
+            { y: 0, opacity: 1, duration: 0.8, ease: "power3.out" }
+          )
+        });
+        scrollTriggersRef.current.push(titleTrigger);
+      });
+
+      // Animaciones para etiquetas de proyecto
+      const projectTags = projectsContainerRef.current.querySelectorAll('.project-tags');
+      projectTags.forEach((tags) => {
+        const tagsTrigger = ScrollTrigger.create({
+          trigger: tags.closest('.project-card'),
+          start: "top 60%",
+          toggleActions: "play none none reverse",
+          animation: gsap.fromTo(
+            tags,
+            { y: 30, opacity: 0 },
+            { y: 0, opacity: 1, duration: 0.8, delay: 0.1, ease: "power3.out" }
+          )
+        });
+        scrollTriggersRef.current.push(tagsTrigger);
+      });
+
+      // Animaciones для año de proyecto
+      const projectYears = projectsContainerRef.current.querySelectorAll('.project-year');
+      projectYears.forEach((year) => {
+        const yearTrigger = ScrollTrigger.create({
+          trigger: year.closest('.project-card'),
+          start: "top 60%",
+          toggleActions: "play none none reverse",
+          animation: gsap.fromTo(
+            year,
+            { y: 30, opacity: 0 },
+            { y: 0, opacity: 1, duration: 0.8, delay: 0.2, ease: "power3.out" }
+          )
+        });
+        scrollTriggersRef.current.push(yearTrigger);
+      });
+
+      // Configuración de parallax para imágenes
+      const parallaxImages = projectsContainerRef.current.querySelectorAll('.parallax-image-wrapper');
+      parallaxImages.forEach((wrapper) => {
+        const container = wrapper.closest('.parallax-container');
+        const parallaxTrigger = ScrollTrigger.create({
+          trigger: container,
+          start: "top bottom",
+          end: "bottom top",
+          scrub: true,
+          invalidateOnRefresh: true,
+          animation: gsap.fromTo(
+            wrapper,
+            { y: "-35%" },
+            { y: "35%", ease: "none" }
+          )
+        });
+        scrollTriggersRef.current.push(parallaxTrigger);
+      });
+    }, projectsContainerRef);
+
+    // Configurar animaciones hover
+    setupHoverAnimations();
+  };
+
+  // useLayoutEffect para mediciones DOM antes del renderizado
+  useLayoutEffect(() => {
+    // Solo ejecutar en el cliente
+    if (typeof window === "undefined") return;
+
+    setIsReady(true);
+
+    return () => {
+      cleanupAnimations();
+      setIsReady(false);
+    };
+  }, []);
+
+  // useEffect para inicializar animaciones cuando todo esté listo
+  useEffect(() => {
+    if (!isReady) return;
+
+    const timer = setTimeout(() => {
+      setupAnimations();
+    }, 100);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [isReady, pathname]);
+
+  // useEffect para manejar cambios de visibilidad y navegación
+  useEffect(() => {
+    if (!isReady) return;
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        // Refrescar animaciones cuando la página vuelve a ser visible
+        ScrollTrigger.refresh();
+        setTimeout(() => {
+          setupAnimations();
+        }, 100);
+      }
+    };
+
+    // Event listener para cambios de visibilidad
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Event listener para cambios de ruta con Next.js
+    const handleRouteChange = () => {
+      setTimeout(() => {
+        ScrollTrigger.refresh();
+        setupAnimations();
+      }, 100);
+    };
+
+    // Para navegación con el botón atrás/adelante del navegador
+    window.addEventListener('popstate', handleRouteChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('popstate', handleRouteChange);
+    };
+  }, [isReady]);
+
+  const ParallaxImage = ({ src, alt }) => {
+    const containerRef = useRef(null);
+    const buttonRef = useRef(null);
+    const [showButton, setShowButton] = useState(false);
+
+    // Referencias para el seguimiento del cursor
+    const mousePosition = useRef({ x: 0, y: 0 });
+    const buttonPosition = useRef({ x: 0, y: 0 });
+    const animationFrameRef = useRef(null);
+
+    // Referencias para controlar las animaciones GSAP
+    const currentAnimationRef = useRef(null);
+
+    // Referencia para almacenar la última posición del cursor en viewport
+    const lastViewportPosition = useRef({ x: 0, y: 0 });
+
+    // Nueva referencia para trackear si el cursor está dentro del elemento
+    const isMouseInside = useRef(false);
+
+    // Nueva referencia para detectar si estamos en scroll
+    const isScrolling = useRef(false);
+
+    // Referencia para el timeout de scroll
+    const scrollTimeoutRef = useRef(null);
+
+    // Función mejorada para calcular la posición relativa
+    const updateRelativePosition = (viewportX, viewportY) => {
+      if (!containerRef.current) return false;
+
+      const rect = containerRef.current.getBoundingClientRect();
+      const newX = viewportX - rect.left;
+      const newY = viewportY - rect.top;
+
+      // Verificar si está dentro del elemento
+      const isInside = newX >= 0 && newX <= rect.width && newY >= 0 && newY <= rect.height;
+
+      if (isInside) {
+        mousePosition.current = { x: newX, y: newY };
+        return true;
+      }
+
+      return false;
+    };
+
+    // Función optimizada para animar el botón hacia la posición del cursor
+    const animateButtonPosition = () => {
+      if (!buttonRef.current || !showButton || !isMouseInside.current) {
+        animationFrameRef.current = null;
+        return;
+      }
+
+      const lerp = (start, end, factor) => start + (end - start) * factor;
+      // Velocidad más rápida durante el scroll para mejor respuesta
+      const ease = isScrolling.current ? 0.6 : 0.2;
+
+      buttonPosition.current.x = lerp(buttonPosition.current.x, mousePosition.current.x, ease);
+      buttonPosition.current.y = lerp(buttonPosition.current.y, mousePosition.current.y, ease);
+
+      gsap.set(buttonRef.current, {
+        x: buttonPosition.current.x,
+        y: buttonPosition.current.y,
+        xPercent: -50,
+        yPercent: -50
+      });
+
+      const deltaX = Math.abs(mousePosition.current.x - buttonPosition.current.x);
+      const deltaY = Math.abs(mousePosition.current.y - buttonPosition.current.y);
+
+      // Continuar animando mientras haya diferencia significativa
+      if ((deltaX > 0.3 || deltaY > 0.3) && showButton && isMouseInside.current) {
+        animationFrameRef.current = requestAnimationFrame(animateButtonPosition);
+      } else {
+        animationFrameRef.current = null;
+      }
+    };
+
+    const handleMouseMove = (e) => {
+      // Actualizar siempre la última posición del viewport
+      lastViewportPosition.current = {
+        x: e.clientX,
+        y: e.clientY
+      };
+
+      // Actualizar posición relativa
+      const isInside = updateRelativePosition(e.clientX, e.clientY);
+
+      if (isInside && showButton && !animationFrameRef.current) {
+        animationFrameRef.current = requestAnimationFrame(animateButtonPosition);
+      }
+    };
+
+    // Función mejorada para manejar el scroll
+    const handleScroll = () => {
+      if (!showButton || !isMouseInside.current || !containerRef.current) {
+        return;
+      }
+
+      // Marcar que estamos scrolleando
+      isScrolling.current = true;
+
+      // Limpiar timeout anterior
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+
+      // Actualizar posición basada en la última posición conocida del cursor
+      const isStillInside = updateRelativePosition(
+        lastViewportPosition.current.x,
+        lastViewportPosition.current.y
+      );
+
+      if (isStillInside) {
+        // Forzar actualización inmediata del botón durante scroll
+        if (!animationFrameRef.current) {
+          animationFrameRef.current = requestAnimationFrame(animateButtonPosition);
+        }
+      } else {
+        // Si ya no está dentro, simular mouse leave
+        isMouseInside.current = false;
+        handleMouseLeave();
+        return;
+      }
+
+      // Resetear el flag de scroll después de un delay
+      scrollTimeoutRef.current = setTimeout(() => {
+        isScrolling.current = false;
+      }, 150);
+    };
+
+    const handleMouseEnter = (e) => {
+      if (!containerRef.current) return;
+
+      // Marcar que el cursor está dentro
+      isMouseInside.current = true;
+
+      // Cancelar cualquier animación pendiente
+      if (currentAnimationRef.current) {
+        currentAnimationRef.current.kill();
+      }
+
+      // Guardar posición inicial del cursor
+      lastViewportPosition.current = {
+        x: e.clientX,
+        y: e.clientY
+      };
+
+      // Calcular posición relativa inicial
+      updateRelativePosition(e.clientX, e.clientY);
+
+      // Inicializar posición del botón en la misma ubicación
+      buttonPosition.current = { ...mousePosition.current };
+
+      // Mostrar el botón
+      setShowButton(true);
+
+      // Agregar listener de scroll cuando el cursor entra
+      window.addEventListener('scroll', handleScroll, { passive: true });
+    };
+
+    // Efecto para manejar la animación cuando showButton cambia
+    useEffect(() => {
+      if (showButton && buttonRef.current) {
+        // Configurar posición inicial y animar entrada
+        gsap.set(buttonRef.current, {
+          x: buttonPosition.current.x,
+          y: buttonPosition.current.y,
+          xPercent: -50,
+          yPercent: -50,
+          scale: 0,
+          opacity: 0
+        });
+
+        currentAnimationRef.current = gsap.to(buttonRef.current, {
+          scale: 1,
+          opacity: 1,
+          duration: 0.4,
+          ease: "back.out(1.7)",
+          onComplete: () => {
+            // Iniciar el seguimiento del cursor después de que aparezca el botón
+            if (isMouseInside.current && !animationFrameRef.current) {
+              animationFrameRef.current = requestAnimationFrame(animateButtonPosition);
+            }
+          }
+        });
+      }
+    }, [showButton]);
+
+    const handleMouseLeave = () => {
+      // Marcar que el cursor ya no está dentro
+      isMouseInside.current = false;
+      isScrolling.current = false;
+
+      // Limpiar timeouts
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+        scrollTimeoutRef.current = null;
+      }
+
+      if (currentAnimationRef.current) {
+        currentAnimationRef.current.kill();
+      }
+
+      // Detener inmediatamente el seguimiento del cursor
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+
+      // Remover listener de scroll cuando el cursor sale
+      window.removeEventListener('scroll', handleScroll);
+
+      if (buttonRef.current) {
+        currentAnimationRef.current = gsap.to(buttonRef.current, {
+          scale: 0,
+          opacity: 0,
+          duration: 0.3,
+          ease: "power2.in",
+          onComplete: () => {
+            setShowButton(false);
+          }
+        });
+      }
+    };
+
+    // Cleanup
+    useEffect(() => {
+      return () => {
+        if (animationFrameRef.current) {
+          cancelAnimationFrame(animationFrameRef.current);
+        }
+        if (currentAnimationRef.current) {
+          currentAnimationRef.current.kill();
+        }
+        if (scrollTimeoutRef.current) {
+          clearTimeout(scrollTimeoutRef.current);
+        }
+        // Limpiar listener de scroll
+        window.removeEventListener('scroll', handleScroll);
+        // Resetear flags
+        isScrolling.current = false;
+        isMouseInside.current = false;
+      };
+    }, []);
+
+    return (
+      <div
+        className="relative h-[250px] md:h-[300px] lg:h-[310px] xl:h-[350px] 2xl:h-[450px]"
+      >
+        <div
+          ref={containerRef}
+          className="parallax-container h-full w-full relative cursor-pointer"
+          onMouseMove={handleMouseMove}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+        >
+          <div className="absolute inset-0 overflow-hidden">
+            <div
+              className="parallax-image-wrapper"
+              style={{
+                height: "130%",
+                width: "100%",
+                position: "absolute",
+                top: "-15%",
+                left: 0,
+              }}
+            >
+              <Image
+                src={src}
+                alt={alt}
+                fill
+                sizes="(max-width: 768px) 100vw, 50vw"
+                className="object-cover project-image transition-transform duration-100"
+                style={{
+                  transition: "transform 0.1s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
+                  transform: `scale(1)`
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Botón circular - optimizado para mejor performance */}
+          <div
+            ref={buttonRef}
+            className="absolute w-24 h-24 md:w-28 md:h-28 bg-black bg-opacity-75 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-300 font-archivo font-medium text-sm md:text-base uppercase tracking-wider pointer-events-none"
+            style={{
+              willChange: 'transform, opacity',
+              backfaceVisibility: 'hidden',
+              zIndex: 50,
+              left: 0,
+              top: 0,
+              opacity: 0,
+              transform: 'scale(0) translate(-50%, -50%)',
+              display: showButton ? 'flex' : 'none'
+            }}
+          >
+            [VER]
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const ProjectCard = ({ project, index }) => (
+    <div className="project-card flex flex-col h-full shadow-lg cursor-pointer" style={{ position: 'relative', overflow: 'visible' }}>
+      <ParallaxImage src={project.images[0]} alt={`${project.title} Image`} />
+      <div className="pt-5 pb-1 flex-grow flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <div className="overflow-hidden">
+            <h2 className="project-title text-[1.05rem] md-[1.125rem] font-archivo font-medium uppercase text-gray-400">
+              {project.title}
+            </h2>
+          </div>
+
+          <div className="overflow-hidden">
+            <div className="project-tags flex items-center space-x-1">
+              {project.tags.map((tag, tagIndex) => (
+                <span key={tagIndex} className="text-sm font-archivo text-gray-700">
+                  {tagIndex > 0 && "·"} {tag}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="overflow-hidden">
+          <div className="project-year text-sm font-archivo text-gray-700">
+            {project.year}
+          </div>
+        </div>
+      </div>
+      {/* Línea consistente con altura fija en píxeles y sin border-radius */}
+      <div
+        className="project-line w-full bg-gray-800 mt-2"
+        style={{ 
+          height: '0.25px',
+          transformOrigin: "left center", 
+          transform: "scaleX(0)",
+          borderRadius: '0',
+          minHeight: '0.25px',
+          maxHeight: '0.25px'
+        }}
+      ></div>
+    </div>
+  );
+
+  return (
+    <section ref={projectsContainerRef} className="bg-dark text-white w-full py-2 px-4 md:px-6 lg:px-8 xl:px-10 2xl:px-20 pt-10 md:pt-16 lg:pt-20  2xl:pt-32" id="proyectos">
+      <Encabezado numero="02" seccion="Proyectos" titulo="Convertimos los desafíos en oportunidades de crear algo memorable" />
+
+      <div className="relative grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8 mt-12 md:mt-16 lg:mt-24 2xl:mt-32" style={{ overflow: 'visible' }}>
+        <div className="hidden 2xl:flex md:col-span-1 flex-col justify-between relative">
+          <div className="absolute left-0 top-0 w-0.5 h-0.5 bg-gray-700"></div>
+          <div className="absolute left-0 bottom-0 w-0.5 h-0.5 bg-gray-700"></div>
+        </div>
+
+        <div className="col-span-1 md:col-span-12 2xl:col-span-11">
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-8" style={{ overflow: 'visible' }}>
+            <div className="col-span-1 md:col-span-3 w-full">
+              <ProjectCard project={projectsData[0]} index={0} />
+            </div>
+            <div className="col-span-1 md:col-span-3 w-full">
+              <ProjectCard project={projectsData[1]} index={1} />
+            </div>
+            <div className="col-span-1 md:col-span-3 lg:col-span-2 w-full">
+              <ProjectCard project={projectsData[2]} index={2} />
+            </div>
+            <div className="col-span-1 md:col-span-3 lg:col-span-2 w-full">
+              <ProjectCard project={projectsData[3]} index={3} />
+            </div>
+<div className="col-span-1 md:hidden lg:block lg:col-span-2 pt-4 md:pt-0 w-full relative h-auto lg:h-full 2xl:max-h-[500px] 2xl:aspect-square flex items-center justify-center">
+  <CircularRotatingText />
+</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+export default Proyectos;
