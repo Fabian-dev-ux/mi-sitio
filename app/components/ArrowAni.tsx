@@ -6,7 +6,7 @@ import {
   MeshTransmissionMaterial, 
   Center 
 } from '@react-three/drei'
-import { Vector2, Vector3, Raycaster, Quaternion, Mesh } from 'three'
+import { Vector2, Vector3, Raycaster, Quaternion, Mesh, Group } from 'three'
 
 // Contexto para compartir la posición del cursor
 const CursorContext = React.createContext({ x: 0, y: 0 });
@@ -15,8 +15,8 @@ const CursorContext = React.createContext({ x: 0, y: 0 });
 const Model = ({ spinSpeed = 1.5 }) => {
   const gltf = useLoader(GLTFLoader, '/models/a1.glb')
   const { camera, size } = useThree()
-  const modelRef = useRef()
-  const groupRef = useRef()
+  const modelRef = useRef<Mesh>(null)
+  const groupRef = useRef<Group>(null)
   const raycaster = new Raycaster()
   const mouse = new Vector2()
   
@@ -54,7 +54,7 @@ const Model = ({ spinSpeed = 1.5 }) => {
   useEffect(() => {
     gltf.scene.traverse((object: any) => {
       if (object.isMesh && modelRef.current) {
-        (modelRef.current as any).geometry = object.geometry;
+        modelRef.current.geometry = object.geometry;
       }
     });
   }, [gltf.scene]);
@@ -127,11 +127,11 @@ const Model = ({ spinSpeed = 1.5 }) => {
 }
 
 // Custom cursor tracker component that reports cursor position
-const CursorTracker = ({ children }) => {
+const CursorTracker = ({ children }: { children: React.ReactNode }) => {
   const [position, setPosition] = useState({ x: 0, y: 0 });
   
   useEffect(() => {
-    const updatePosition = (e) => {
+    const updatePosition = (e: MouseEvent) => {
       setPosition({ x: e.clientX, y: e.clientY });
     };
     
