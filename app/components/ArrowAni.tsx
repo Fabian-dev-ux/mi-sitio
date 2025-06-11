@@ -52,17 +52,11 @@ const Model = ({ spinSpeed = 1.5 }) => {
 
   // Apply the model's geometry to our mesh
   useEffect(() => {
-    let targetMesh: Mesh | null = null;
-    
-    gltf.scene.traverse(object => {
-      if (object instanceof Mesh) {
-        targetMesh = object;
+    gltf.scene.traverse((object: any) => {
+      if (object.isMesh && modelRef.current) {
+        (modelRef.current as any).geometry = object.geometry;
       }
     });
-    
-    if (targetMesh && modelRef.current) {
-      (modelRef.current as Mesh).geometry = targetMesh.geometry;
-    }
   }, [gltf.scene]);
 
   // Track cursor and make arrow rotate to point at cursor in 3D space while spinning
