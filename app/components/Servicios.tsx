@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useLayoutEffect } from "react";
 import { useRouter } from "next/navigation";
 import Encabezado from "./Encabezado";
 import { gsap, ScrollTrigger } from "@/lib/gsapInit";
-import Lottie from "lottie-web";
+import Lottie, { AnimationItem } from "lottie-web";
 
 // Definición de interfaces
 interface CardData {
@@ -22,8 +22,8 @@ const Servicios: React.FC = () => {
   const cardsRef = useRef<(HTMLDivElement | null)[]>([]);
   const lottieRefs = useRef<(HTMLDivElement | null)[]>([]);
   const lottieBlackRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const lottieInstances = useRef<any[]>([]);
-  const lottieBlackInstances = useRef<any[]>([]);
+  const lottieInstances = useRef<(AnimationItem | null)[]>([]);
+  const lottieBlackInstances = useRef<(AnimationItem | null)[]>([]);
   const animationDurations = useRef<number[]>([]);
   const currentPlayingIndex = useRef<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -330,14 +330,14 @@ const Servicios: React.FC = () => {
             const tags = card.querySelectorAll<HTMLElement>(".card-tags span");
 
             if (descText && numberText) {
-              gsap.to([...titleWords, descText, numberText], {
+              gsap.to([...Array.from(titleWords), descText, numberText], {
                 color: "#000000",
                 duration: 0.4,
                 ease: "power2.out"
               });
             }
 
-            gsap.to(tags, {
+            gsap.to(Array.from(tags), {
               color: "#000000",
               borderColor: "#000000",
               duration: 0.4,
@@ -364,7 +364,7 @@ const Servicios: React.FC = () => {
             const numberText = card.querySelector<HTMLElement>(".card-number");
             const tags = card.querySelectorAll<HTMLElement>(".card-tags span");
 
-            gsap.to(titleWords, {
+            gsap.to(Array.from(titleWords), {
               color: "#b6bcc7",
               duration: 0.4,
               ease: "power2.out"
@@ -384,7 +384,7 @@ const Servicios: React.FC = () => {
               });
             }
 
-            gsap.to(tags, {
+            gsap.to(Array.from(tags), {
               color: "#565A63",
               borderColor: "#2D3036",
               duration: 0.4,
@@ -547,7 +547,7 @@ const Servicios: React.FC = () => {
           {cardsData.map((card, index) => (
             <div
               key={`card-${index}`}
-              ref={(el) => (cardsRef.current[index] = el)}
+              ref={(el) => { cardsRef.current[index] = el; }}
               className="relative p-4 md:p-8 flex flex-col justify-between overflow-visible group cursor-pointer"
             >
               <div className="bg-overlay absolute top-2 left-2 right-2 bottom-2 bg-primary opacity-0 scale-90 transform-gpu origin-center z-0"></div>
@@ -583,12 +583,12 @@ const Servicios: React.FC = () => {
                 <div className="relative w-48 h-48 md:w-[212.5px] md:h-[212.5px]">
                   {/* Lottie normal */}
                   <div
-                    ref={(el) => (lottieRefs.current[index] = el)}
+                    ref={(el) => { lottieRefs.current[index] = el; }}
                     className="card-icon absolute inset-0 w-full h-full"
                   ></div>
                   {/* Lottie negro (inicialmente oculto) */}
                   <div
-                    ref={(el) => (lottieBlackRefs.current[index] = el)}
+                    ref={(el) => { lottieBlackRefs.current[index] = el; }}
                     className="card-icon-black absolute inset-0 w-full h-full"
                   ></div>
                 </div>
