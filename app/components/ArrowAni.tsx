@@ -52,7 +52,7 @@ const Model = ({ spinSpeed = 1.5 }) => {
 
   // Apply the model's geometry to our mesh
   useEffect(() => {
-    let targetMesh = null;
+    let targetMesh: Mesh | null = null;
     
     gltf.scene.traverse(object => {
       if (object instanceof Mesh) {
@@ -61,7 +61,7 @@ const Model = ({ spinSpeed = 1.5 }) => {
     });
     
     if (targetMesh && modelRef.current) {
-      modelRef.current.geometry = targetMesh.geometry;
+      (modelRef.current as Mesh).geometry = targetMesh.geometry;
     }
   }, [gltf.scene]);
 
