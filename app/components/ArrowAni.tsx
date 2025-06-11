@@ -6,7 +6,7 @@ import {
   MeshTransmissionMaterial, 
   Center 
 } from '@react-three/drei'
-import { Vector2, Vector3, Raycaster, Quaternion } from 'three'
+import { Vector2, Vector3, Raycaster, Quaternion, Mesh } from 'three'
 
 // Contexto para compartir la posición del cursor
 const CursorContext = React.createContext({ x: 0, y: 0 });
@@ -55,7 +55,7 @@ const Model = ({ spinSpeed = 1.5 }) => {
     let targetMesh = null;
     
     gltf.scene.traverse(object => {
-      if (object.isMesh) {
+      if (object instanceof Mesh) {
         targetMesh = object;
       }
     });
