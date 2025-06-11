@@ -1,6 +1,7 @@
 import React, { useRef, useMemo, useEffect } from 'react'
 import { Canvas, useLoader, useThree, useFrame } from '@react-three/fiber'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader'
+import * as THREE from 'three'
 import { 
   Environment, 
   MeshTransmissionMaterial, 
@@ -11,8 +12,8 @@ import {
 const Model = () => {
   const gltf = useLoader(GLTFLoader, '/models/fragmento.glb')
   const { camera } = useThree()
-  const modelRef = useRef()
-  const groupRef = useRef()
+  const modelRef = useRef<THREE.Mesh>(null)
+  const groupRef = useRef<THREE.Group>(null)
   
   // Random rotation speeds for each axis
   const rotationSpeeds = useMemo(() => ({
@@ -46,16 +47,16 @@ const Model = () => {
 
   // Apply the model's geometry to our mesh
   useEffect(() => {
-    let targetMesh = null;
+    let targetGeometry: THREE.BufferGeometry | null = null;
     
-    gltf.scene.traverse(object => {
-      if (object.isMesh) {
-        targetMesh = object;
+    gltf.scene.traverse((object: THREE.Object3D) => {
+      if (object instanceof THREE.Mesh && object.geometry) {
+        targetGeometry = object.geometry;
       }
     });
     
-    if (targetMesh && modelRef.current) {
-      modelRef.current.geometry = targetMesh.geometry;
+    if (targetGeometry && modelRef.current) {
+      modelRef.current.geometry = targetGeometry;
     }
   }, [gltf.scene]);
 
