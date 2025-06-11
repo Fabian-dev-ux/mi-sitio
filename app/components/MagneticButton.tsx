@@ -1,10 +1,24 @@
 "use client";
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, ReactNode } from "react";
 import gsap from "gsap";
 
-const MagneticButton = ({ children, className = "", magneticStrength = 0.5, magneticArea = 150, ...props }) => {
-  const buttonRef = useRef(null);
-  const containerRef = useRef(null);
+interface MagneticButtonProps {
+  children: ReactNode;
+  className?: string;
+  magneticStrength?: number;
+  magneticArea?: number;
+  [key: string]: any; // For additional props
+}
+
+const MagneticButton: React.FC<MagneticButtonProps> = ({ 
+  children, 
+  className = "", 
+  magneticStrength = 0.5, 
+  magneticArea = 150, 
+  ...props 
+}) => {
+  const buttonRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const button = buttonRef.current;
@@ -21,7 +35,7 @@ const MagneticButton = ({ children, className = "", magneticStrength = 0.5, magn
     const originalX = 0;
     const originalY = 0;
     
-    const handleMouseMove = (e) => {
+    const handleMouseMove = (e: MouseEvent) => {
       // Actualizar las dimensiones del botón en cada movimiento
       buttonRect = button.getBoundingClientRect();
       buttonCenterX = buttonRect.left + buttonRect.width / 2;
