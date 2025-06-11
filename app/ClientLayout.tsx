@@ -65,9 +65,7 @@ export default function ClientLayout({
              
       {/* Animación de entrada, se muestra hasta que se complete */}
       {!animationCompleted && (
-        <EntranceAnimation
-          devMode={false}
-          onAnimationComplete={handleAnimationComplete}
+        <div
           style={{
             position: 'fixed',
             top: 0,
@@ -76,7 +74,12 @@ export default function ClientLayout({
             bottom: 0,
             zIndex: 10 // Asegura que esté por encima de todo mientras se muestra
           }}
-        />
+        >
+          <EntranceAnimation
+            devMode={false}
+            onAnimationComplete={handleAnimationComplete}
+          />
+        </div>
       )}
     </>
   );
