@@ -10,5 +10,5 @@ export default function ConditionalFooter() {
     return null; // No mostrar Footer en /contacto
   }
 
-  return <Footer className="relative z-0" />;
+  return <Footer />;
 }
