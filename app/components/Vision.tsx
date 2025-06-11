@@ -10,11 +10,17 @@ interface EncabezadoProps {
   espaciadoPalabras?: string; // Parámetro para espaciado entre palabras
 }
 
+// Interface para ParallaxImage props
+interface ParallaxImageProps {
+  src: string;
+  alt: string;
+}
+
 // Reemplazando ParallaxImage con versión GSAP
-const ParallaxImage = ({ src, alt }) => {
-  const containerRef = useRef(null);
-  const imageWrapperRef = useRef(null);
-  const parallaxRef = useRef(null);
+const ParallaxImage: React.FC<ParallaxImageProps> = ({ src, alt }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const imageWrapperRef = useRef<HTMLDivElement>(null);
+  const parallaxRef = useRef<ScrollTrigger | null>(null);
 
   useEffect(() => {
     if (!containerRef.current || !imageWrapperRef.current) return;
@@ -378,7 +384,7 @@ const Encabezado: React.FC<EncabezadoProps> = ({
   );
 };
 
-const Vision = () => {
+const Vision: React.FC = () => {
   // Referencias para el manejo de animaciones
   const sectionRef = useRef<HTMLElement>(null);
   const ctxRef = useRef<gsap.Context | null>(null);
