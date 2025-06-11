@@ -3,15 +3,28 @@ import React, { useEffect, useRef, useState } from 'react';
 import Encabezado from './Encabezado';
 import Fragmento from './Fragmento';
 
-const ProcesoSectionSticky = () => {
-  const cardsRef = useRef(null);
-  const stickyRef = useRef(null);
-  const containerRef = useRef(null);
-  const [isMobile, setIsMobile] = useState(false);
-  const [currentSlide, setCurrentSlide] = useState(0);
-  const [isTransitioning, setIsTransitioning] = useState(false);
+interface Etapa {
+  numero: string;
+  titulo: string;
+  descripcion: string;
+  imagen: string;
+  tags: string[];
+}
 
-  const etapas = [
+interface CardProps {
+  etapa: Etapa;
+  index: number;
+}
+
+const ProcesoSectionSticky: React.FC = () => {
+  const cardsRef = useRef<HTMLDivElement>(null);
+  const stickyRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isMobile, setIsMobile] = useState<boolean>(false);
+  const [currentSlide, setCurrentSlide] = useState<number>(0);
+  const [isTransitioning, setIsTransitioning] = useState<boolean>(false);
+
+  const etapas: Etapa[] = [
     {
       numero: "01",
       titulo: "Descubrimiento",
@@ -43,7 +56,7 @@ const ProcesoSectionSticky = () => {
   ];
 
   // Crear slides extendidos para el loop infinito
-  const extendedEtapas = [
+  const extendedEtapas: Etapa[] = [
     etapas[etapas.length - 1], // Último slide al inicio
     ...etapas, // Slides originales
     etapas[0] // Primer slide al final
@@ -51,7 +64,7 @@ const ProcesoSectionSticky = () => {
 
   // Detectar si es mobile
   useEffect(() => {
-    const checkIsMobile = () => {
+    const checkIsMobile = (): void => {
       setIsMobile(window.innerWidth < 768);
     };
     
@@ -70,14 +83,14 @@ const ProcesoSectionSticky = () => {
   }, [isMobile]);
 
   // Funciones para el carousel mobile con loop infinito suave
-  const nextSlide = () => {
+  const nextSlide = (): void => {
     if (isTransitioning) return;
     
     setIsTransitioning(true);
     setCurrentSlide(prev => prev + 1);
   };
 
-  const prevSlide = () => {
+  const prevSlide = (): void => {
     if (isTransitioning) return;
     
     setIsTransitioning(true);
@@ -85,7 +98,7 @@ const ProcesoSectionSticky = () => {
   };
 
   // Función para ir a un slide específico
-  const goToSlide = (index) => {
+  const goToSlide = (index: number): void => {
     if (isTransitioning) return;
     
     setIsTransitioning(true);
@@ -96,7 +109,7 @@ const ProcesoSectionSticky = () => {
   useEffect(() => {
     if (!isMobile || !isTransitioning) return;
 
-    const handleTransitionEnd = () => {
+    const handleTransitionEnd = (): void => {
       setIsTransitioning(false);
       
       // Si llegamos al slide duplicado del final, saltar al inicio real
@@ -114,7 +127,7 @@ const ProcesoSectionSticky = () => {
   }, [currentSlide, isTransitioning, isMobile, extendedEtapas.length, etapas.length]);
 
   // Función para animar imágenes sincronizadamente
-  const animateImages = (activeIndex, images) => {
+  const animateImages = (activeIndex: number, images: HTMLImageElement[]): void => {
     images.forEach((image, index) => {
       if (index === activeIndex) {
         // Imagen que aparece
@@ -133,11 +146,11 @@ const ProcesoSectionSticky = () => {
   // Efecto para manejar animaciones de imágenes en mobile - VERSIÓN SINCRONIZADA
   useEffect(() => {
     if (isMobile && cardsRef.current) {
-      const images = cardsRef.current.querySelectorAll('.card-image');
+      const images = cardsRef.current.querySelectorAll<HTMLImageElement>('.card-image');
       const activeIndex = currentSlide;
       
       // Ejecutar animaciones simultáneamente
-      animateImages(activeIndex, images);
+      animateImages(activeIndex, Array.from(images));
     }
   }, [currentSlide, isMobile]);
 
@@ -148,78 +161,78 @@ const ProcesoSectionSticky = () => {
     let ticking = false;
     let lastActiveIndex = 0;
 
-   const handleScroll = () => {
-  if (!ticking && cardsRef.current && containerRef.current) {
-    requestAnimationFrame(() => {
-      // Add null checks here as well
-      if (!cardsRef.current || !containerRef.current) {
-        ticking = false;
-        return;
+    const handleScroll = (): void => {
+      if (!ticking && cardsRef.current && containerRef.current) {
+        requestAnimationFrame(() => {
+          // Add null checks here as well
+          if (!cardsRef.current || !containerRef.current) {
+            ticking = false;
+            return;
+          }
+
+          const container = containerRef.current;
+          const containerRect = container.getBoundingClientRect();
+          const containerTop = containerRect.top;
+          const containerHeight = container.offsetHeight;
+          const windowHeight = window.innerHeight;
+
+          // Calcular el progreso de manera más rápida
+          const startTrigger = windowHeight * 0.3;
+          const endTrigger = -containerHeight + windowHeight * 0.7;
+
+          let progress = 0;
+          
+          if (containerTop <= startTrigger && containerTop >= endTrigger) {
+            const totalScrollDistance = startTrigger - endTrigger;
+            const currentScrollDistance = startTrigger - containerTop;
+            progress = Math.max(0, Math.min(1, currentScrollDistance / totalScrollDistance));
+            progress = Math.pow(progress, 0.8);
+          } else if (containerTop < endTrigger) {
+            progress = 1;
+          }
+
+          const smoothProgress = progress;
+          
+          // Aplicar transformación con centrado perfecto
+          const cardWidth = 400;
+          const cardGap = 48;
+          const cardTotalWidth = cardWidth + cardGap;
+          const maxTranslateX = (etapas.length - 1) * cardTotalWidth;
+          
+          const viewportWidth = window.innerWidth;
+          const cardHalfWidth = cardWidth / 2;
+          const perfectCenter = (viewportWidth / 2) - cardHalfWidth;
+          
+          const translateX = perfectCenter - (smoothProgress * maxTranslateX);
+          
+          // Additional null check before applying transform
+          if (cardsRef.current) {
+            cardsRef.current.style.transform = `translateX(${translateX}px)`;
+          }
+
+          // Determinar card activo con mejor precisión
+          const rawActiveIndex = smoothProgress * (etapas.length - 1);
+          const activeIndex = Math.round(rawActiveIndex);
+          
+          // Solo animar si cambió el índice activo
+          if (activeIndex !== lastActiveIndex && cardsRef.current) {
+            const cards = cardsRef.current.children;
+            const images = Array.from(cards).map(card => card.querySelector<HTMLImageElement>('.card-image')).filter((img): img is HTMLImageElement => img !== null);
+            
+            // Ejecutar animaciones sincronizadas
+            animateImages(activeIndex, images);
+            
+            lastActiveIndex = activeIndex;
+          }
+
+          ticking = false;
+        });
+        ticking = true;
       }
-
-      const container = containerRef.current;
-      const containerRect = container.getBoundingClientRect();
-      const containerTop = containerRect.top;
-      const containerHeight = container.offsetHeight;
-      const windowHeight = window.innerHeight;
-
-      // Calcular el progreso de manera más rápida
-      const startTrigger = windowHeight * 0.3;
-      const endTrigger = -containerHeight + windowHeight * 0.7;
-
-      let progress = 0;
-      
-      if (containerTop <= startTrigger && containerTop >= endTrigger) {
-        const totalScrollDistance = startTrigger - endTrigger;
-        const currentScrollDistance = startTrigger - containerTop;
-        progress = Math.max(0, Math.min(1, currentScrollDistance / totalScrollDistance));
-        progress = Math.pow(progress, 0.8);
-      } else if (containerTop < endTrigger) {
-        progress = 1;
-      }
-
-      const smoothProgress = progress;
-      
-      // Aplicar transformación con centrado perfecto
-      const cardWidth = 400;
-      const cardGap = 48;
-      const cardTotalWidth = cardWidth + cardGap;
-      const maxTranslateX = (etapas.length - 1) * cardTotalWidth;
-      
-      const viewportWidth = window.innerWidth;
-      const cardHalfWidth = cardWidth / 2;
-      const perfectCenter = (viewportWidth / 2) - cardHalfWidth;
-      
-      const translateX = perfectCenter - (smoothProgress * maxTranslateX);
-      
-      // Additional null check before applying transform
-      if (cardsRef.current) {
-        cardsRef.current.style.transform = `translateX(${translateX}px)`;
-      }
-
-      // Determinar card activo con mejor precisión
-      const rawActiveIndex = smoothProgress * (etapas.length - 1);
-      const activeIndex = Math.round(rawActiveIndex);
-      
-      // Solo animar si cambió el índice activo
-      if (activeIndex !== lastActiveIndex && cardsRef.current) {
-        const cards = cardsRef.current.children;
-        const images = Array.from(cards).map(card => card.querySelector('.card-image')).filter(Boolean);
-        
-        // Ejecutar animaciones sincronizadas
-        animateImages(activeIndex, images);
-        
-        lastActiveIndex = activeIndex;
-      }
-
-      ticking = false;
-    });
-    ticking = true;
-  }
-};
+    };
 
     // Configuración inicial con centrado perfecto
-    const setupCards = () => {
+    const setupCards = (): void => {
       if (!cardsRef.current) return;
       
       const cardWidth = 400;
@@ -240,10 +253,11 @@ const ProcesoSectionSticky = () => {
       
       // Configurar cada card e inicializar imágenes
       Array.from(cardsRef.current.children).forEach((card, index) => {
-        card.style.minWidth = `${cardWidth}px`;
-        card.style.flexShrink = '0';
+        const cardElement = card as HTMLElement;
+        cardElement.style.minWidth = `${cardWidth}px`;
+        cardElement.style.flexShrink = '0';
         
-        const image = card.querySelector('.card-image');
+        const image = cardElement.querySelector<HTMLImageElement>('.card-image');
         if (image) {
           if (index === 0) {
             image.style.transform = 'translateY(0)';
@@ -267,7 +281,7 @@ const ProcesoSectionSticky = () => {
   }, [isMobile, etapas.length]);
 
   // Componente Card para reutilizar
-  const Card = ({ etapa, index }) => (
+  const Card: React.FC<CardProps> = ({ etapa, index }) => (
     <div className={`flex-shrink-0 ${isMobile ? 'w-full' : 'w-[400px]'}`}>
       <div className="flex flex-col h-full p-6">
         
