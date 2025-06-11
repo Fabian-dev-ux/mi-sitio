@@ -26,8 +26,12 @@ export default function EntranceAnimation({
     const bgStrip3Ref = useRef(null);
     const containerRef = useRef(null);
 
-    // Cache for frequently used DOM elements
-    const elementsCache = useRef({
+    // Cache for frequently used DOM elements - Fixed type definition
+    const elementsCache = useRef<{
+        letters: NodeListOf<Element> | null;
+        letterHeight: number;
+        timeline: gsap.core.Timeline | null;
+    }>({
         letters: null,
         letterHeight: 0,
         timeline: null
@@ -59,8 +63,9 @@ export default function EntranceAnimation({
                 svgRef.current
             ].filter(Boolean);
             
+            // Fixed: Add type guard and convert NodeList to Array
             if (elementsCache.current.letters) {
-                allElements.push(...elementsCache.current.letters);
+                allElements.push(...Array.from(elementsCache.current.letters));
             }
             
             // Clean will-change and kill animations
@@ -281,6 +286,7 @@ export default function EntranceAnimation({
             bgStrip2Ref.current,
             bgStrip3Ref.current,
             ...progressNumbers,
+            // Fixed: Add type guard and convert NodeList to Array
             ...(letters ? Array.from(letters) : [])
         ].filter(Boolean);
         
