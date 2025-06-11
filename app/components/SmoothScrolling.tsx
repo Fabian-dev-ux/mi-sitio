@@ -1,25 +1,33 @@
-// components/SmoothScrolling.tsx
 'use client'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import Lenis from '@studio-freight/lenis'
 
 export default function SmoothScrolling() {
+  const lenisRef = useRef<Lenis | null>(null)
+  const rafRef = useRef<number | null>(null)
+
   useEffect(() => {
-    const lenis = new Lenis({
+    lenisRef.current = new Lenis({
       duration: 1.2,
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-      smooth: true,
+      easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
     })
 
-    function raf(time: number) {
-      lenis.raf(time)
-      requestAnimationFrame(raf)
+    function raf(time: number): void {
+      if (lenisRef.current) {
+        lenisRef.current.raf(time)
+      }
+      rafRef.current = requestAnimationFrame(raf)
     }
 
-    requestAnimationFrame(raf)
+    rafRef.current = requestAnimationFrame(raf)
 
     return () => {
-      lenis.destroy()
+      if (lenisRef.current) {
+        lenisRef.current.destroy()
+      }
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current)
+      }
     }
   }, [])
 
