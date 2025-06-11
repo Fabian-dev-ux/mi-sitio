@@ -1,15 +1,22 @@
-// components/PageTransition.jsx
 'use client'
 import { useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 import { gsap, ScrollTrigger } from "@/lib/gsapInit"
 
-export default function PageTransition({ children }) {
+interface PageTransitionProps {
+  children: React.ReactNode;
+  isReady?: boolean;
+}
+
+export default function PageTransition({ children, isReady = true }: PageTransitionProps) {
   const containerRef = useRef(null)
   const curtain1Ref = useRef(null)
   const curtain2Ref = useRef(null)
   const curtain3Ref = useRef(null)
   const pathname = usePathname()
+
+  const prevPathnameRef = useRef(pathname)
+  const hasInitializedRef = useRef(false)
 
   useEffect(() => {
     const container = containerRef.current
@@ -18,6 +25,42 @@ export default function PageTransition({ children }) {
     const curtain3 = curtain3Ref.current
     
     if (!container || !curtain1 || !curtain2 || !curtain3) return
+
+    // Si no está listo, mostrar el contenido sin animación
+    if (!isReady) {
+      gsap.set(container, { 
+        opacity: 1,
+        y: 0
+      })
+      // Ocultar las franjas
+      gsap.set([curtain1, curtain2, curtain3], { 
+        y: '100%',
+        scaleY: 0
+      })
+      return;
+    }
+
+    // Detectar si es un cambio de ruta real (no la primera carga)
+    const isRouteChange = hasInitializedRef.current && prevPathnameRef.current !== pathname
+    
+    if (!isRouteChange) {
+      // Primera carga o no es cambio de ruta - mostrar contenido directamente
+      gsap.set(container, { 
+        opacity: 1,
+        y: 0
+      })
+      // Ocultar las franjas
+      gsap.set([curtain1, curtain2, curtain3], { 
+        y: '100%',
+        scaleY: 0
+      })
+      hasInitializedRef.current = true
+      prevPathnameRef.current = pathname
+      return;
+    }
+
+    // Solo ejecutar la animación de transición en cambios de ruta
+    console.log('Ejecutando animación de transición de página')
 
     // Configuración inicial
     gsap.set(container, { 
@@ -51,7 +94,7 @@ export default function PageTransition({ children }) {
       ease: 'power2.inOut'
     }, 0.3) // Delay de 0.3s
     
-    // Las franjas se contraen desde arriba de forma escalonada - empiezan antes de que terminen de subir
+    // Las franjas se contraen desde arriba de forma escalonada - empiezan antes de que termenen de subir
     .to(curtain1, {
       scaleY: 0,
       transformOrigin: 'top center',
@@ -79,10 +122,13 @@ export default function PageTransition({ children }) {
       ease: 'power2.out'
     }, 0.7)
 
+    // Actualizar las referencias
+    prevPathnameRef.current = pathname
+
     return () => {
       tl.kill()
     }
-  }, [pathname])
+  }, [pathname, isReady])
 
   return (
     <>
