@@ -6,8 +6,20 @@ import HeroBackground from './HeroBackground';
 import SlideTextOnHover from './SlideTextOnHover';
 import Image from 'next/image';
 
+// Define interfaces for TypeScript
+interface RotatingArrowProps {
+  isHovering: boolean;
+  isGroupHovering?: boolean;
+}
+
+interface SocialIconProps {
+  icon?: React.ReactNode;
+  hoverIcon?: React.ReactNode;
+  link?: string;
+}
+
 // RotatingArrow component with inline SVG - fixed version
-const RotatingArrow = ({ isHovering, isGroupHovering }: { isHovering: boolean, isGroupHovering?: boolean }) => {
+const RotatingArrow = ({ isHovering, isGroupHovering }: RotatingArrowProps) => {
   // Define el color personalizado aquí
   const customColor = isGroupHovering ? "#000000" : "#FF5741"; // Cambia a color dark al hacer hover
 
@@ -36,7 +48,7 @@ const RotatingArrow = ({ isHovering, isGroupHovering }: { isHovering: boolean, i
 };
 
 // SocialIcon component with hover effect and gray background - no animation on mobile
-const SocialIcon = ({ icon, hoverIcon, link = "#" }) => {
+const SocialIcon = ({ icon, hoverIcon, link = "#" }: SocialIconProps) => {
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
