@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useGSAP } from "@gsap/react";
 import { gsap, ScrollTrigger } from "@/lib/gsapInit";
-import Link from "next/link"; // Agregamos la importación de Link
+import Link from "next/link";
 import ArrowAni from "./ArrowAni";
 import SlideTextOnHover from "./SlideTextOnHover";
 
@@ -17,138 +17,22 @@ const ContactoForm: React.FC = () => {
     intereses: [] as string[]
   });
 
+  // Estados para manejar el envío del formulario
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [submitMessage, setSubmitMessage] = useState('');
+
   const titleContainerRef = useRef<HTMLDivElement>(null);
   const formContainerRef = useRef<HTMLDivElement>(null);
   const leftColumnRef = useRef<HTMLDivElement>(null);
   const rightColumnRef = useRef<HTMLDivElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
   const titleText = "LOREM IPSUM LOREM IPSUM DOLOR SIT AMET, CONSECTETUER ADIPISCING LOREM IPSUM DOLOR SIT";
 
-  // Set up animations using useGSAP
+  // Set up animations using useGSAP - Solo mantener animaciones de formulario si las necesitas
   useGSAP(() => {
-    if (!titleContainerRef.current || !formContainerRef.current) return;
-
-    // Animación de palabras en el título
-    const words = titleContainerRef.current.querySelectorAll('.animated-word');
-    gsap.set(words, {
-      y: "100%",
-      opacity: 0
-    });
-
-    gsap.to(words, {
-      y: "0%",
-      opacity: 1,
-      duration: 0.7,
-      ease: "power3.out",
-      stagger: 0.03, // Pequeño stagger para una animación más natural
-      scrollTrigger: {
-        trigger: titleContainerRef.current,
-        start: "top 80%",
-        toggleActions: "play none none reverse"
-      }
-    });
-
-    // Animar los bordes de la columna izquierda
-    if (leftColumnRef.current) {
-      const leftBorders = leftColumnRef.current.querySelectorAll('.border-element');
-      gsap.set(leftBorders, { 
-        scaleX: (i, el) => el.classList.contains('border-top') || el.classList.contains('border-bottom') ? 0 : 1,
-        scaleY: (i, el) => el.classList.contains('border-left') || el.classList.contains('border-right') ? 0 : 1,
-        opacity: 0, 
-        transformOrigin: "center" 
-      });
-
-      // Animar la información de contacto
-      const contactInfoBlocks = leftColumnRef.current.querySelectorAll<HTMLElement>('.contact-info > div');
-      gsap.set(contactInfoBlocks, { y: 20, opacity: 0 });
-
-      ScrollTrigger.create({
-        trigger: leftColumnRef.current,
-        start: "top 70%",
-        onEnter: () => {
-          // Animar los bordes
-          gsap.to(leftBorders, { 
-            scaleX: (i, el) => el.classList.contains('border-top') || el.classList.contains('border-bottom') ? 0.98 : 1,
-            scaleY: (i, el) => el.classList.contains('border-left') || el.classList.contains('border-right') ? 0.95 : 1,
-            opacity: 1, 
-            duration: 0.6, 
-            ease: "power2.out",
-            stagger: 0.1
-          });
-
-          // Animar la información de contacto
-          gsap.to(contactInfoBlocks, {
-            y: 0,
-            opacity: 1,
-            duration: 0.7,
-            stagger: 0.1,
-            delay: 0.3,
-            ease: "power2.out"
-          });
-        },
-        onLeaveBack: () => {
-          // Revertir animaciones cuando se sale del viewport
-          gsap.to(leftBorders, { 
-            scaleX: (i, el) => el.classList.contains('border-top') || el.classList.contains('border-bottom') ? 0 : 1,
-            scaleY: (i, el) => el.classList.contains('border-left') || el.classList.contains('border-right') ? 0 : 1,
-            opacity: 0, 
-            duration: 0.4 
-          });
-          gsap.to(contactInfoBlocks, { y: 20, opacity: 0, duration: 0.4 });
-        }
-      });
-    }
-
-    // Animar los bordes de la columna derecha
-    if (rightColumnRef.current) {
-      const rightBorders = rightColumnRef.current.querySelectorAll('.border-element');
-      gsap.set(rightBorders, { 
-        scaleX: (i, el) => el.classList.contains('border-top') || el.classList.contains('border-bottom') ? 0 : 1,
-        scaleY: (i, el) => el.classList.contains('border-left') || el.classList.contains('border-right') ? 0 : 1,
-        opacity: 0, 
-        transformOrigin: "center" 
-      });
-
-      // Animar los campos del formulario
-      const formFields = rightColumnRef.current.querySelectorAll<HTMLElement>('input, textarea, button, .interest-button');
-      gsap.set(formFields, { y: 20, opacity: 0 });
-
-      ScrollTrigger.create({
-        trigger: rightColumnRef.current,
-        start: "top 70%",
-        onEnter: () => {
-          // Animar los bordes
-          gsap.to(rightBorders, { 
-            scaleX: (i, el) => el.classList.contains('border-top') || el.classList.contains('border-bottom') ? 0.98 : 1,
-            scaleY: (i, el) => el.classList.contains('border-left') || el.classList.contains('border-right') ? 0.95 : 1,
-            opacity: 1, 
-            duration: 0.6, 
-            ease: "power2.out",
-            stagger: 0.1
-          });
-
-          // Animar campos del formulario
-          gsap.to(formFields, {
-            y: 0,
-            opacity: 1,
-            duration: 0.5,
-            stagger: 0.05,
-            delay: 0.5,
-            ease: "power2.out"
-          });
-        },
-        onLeaveBack: () => {
-          // Revertir animaciones cuando se sale del viewport
-          gsap.to(rightBorders, { 
-            scaleX: (i, el) => el.classList.contains('border-top') || el.classList.contains('border-bottom') ? 0 : 1,
-            scaleY: (i, el) => el.classList.contains('border-left') || el.classList.contains('border-right') ? 0 : 1,
-            opacity: 0, 
-            duration: 0.4 
-          });
-          gsap.to(formFields, { y: 20, opacity: 0, duration: 0.4 });
-        }
-      });
-    }
-
+    // Eliminadas todas las animaciones de texto y bordes
+    // Solo mantener limpieza de ScrollTriggers si es necesario
   }, { 
     scope: formContainerRef,
     dependencies: [], 
@@ -198,6 +82,18 @@ const ContactoForm: React.FC = () => {
     };
   }, []);
 
+  // Efecto para limpiar el mensaje de estado después de 5 segundos
+  useEffect(() => {
+    if (submitStatus !== 'idle') {
+      const timer = setTimeout(() => {
+        setSubmitStatus('idle');
+        setSubmitMessage('');
+      }, 5000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [submitStatus]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData({
@@ -215,28 +111,90 @@ const ContactoForm: React.FC = () => {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log(formData);
-  };
+    
+    if (!formRef.current) return;
 
-  // Split the title text into individual words for animation
-  const animatedWords = titleText.split(' ').map((word, index) => (
-    <span
-      key={index}
-      className="inline-block overflow-hidden mr-2.5" // Reducido de mr-2 a mr-1 para disminuir el espacio entre palabras
-    >
-      <span
-        className="animated-word inline-block"
-        style={{ 
-          willChange: "transform, opacity",
-          letterSpacing: "-0.00em", // Reduce el espacio entre letras
-        }}
-      >
-        {word}
-      </span>
-    </span>
-  ));
+    setIsSubmitting(true);
+    setSubmitStatus('idle');
+
+    try {
+      console.log('🚀 Enviando formulario con Netlify Forms...');
+      
+      // Validar campos requeridos
+      if (!formData.nombre.trim()) {
+        throw new Error('El nombre es requerido');
+      }
+      if (!formData.email.trim()) {
+        throw new Error('El email es requerido');
+      }
+      if (!formData.telefono.trim()) {
+        throw new Error('El teléfono es requerido');
+      }
+
+      // Validar formato de email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email)) {
+        throw new Error('Por favor, ingresa un email válido');
+      }
+
+      console.log('✅ Validaciones pasadas');
+
+      // Preparar datos para Netlify Forms
+      const formDataToSend = new FormData();
+      formDataToSend.append('form-name', 'contacto'); // Nombre del formulario
+      formDataToSend.append('nombre', formData.nombre.trim());
+      formDataToSend.append('email', formData.email.trim().toLowerCase());
+      formDataToSend.append('telefono', formData.telefono.trim());
+      formDataToSend.append('empresa', formData.empresa.trim() || 'No especificada');
+      formDataToSend.append('mensaje', formData.mensaje.trim() || 'Sin mensaje adicional');
+      formDataToSend.append('intereses', formData.intereses.length > 0 ? formData.intereses.join(', ') : 'No especificados');
+
+      // Enviar a Netlify Forms
+      const response = await fetch('/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams(formDataToSend as any).toString()
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+
+      console.log('✅ Formulario enviado correctamente a Netlify');
+
+      // ÉXITO - Limpiar formulario
+      setFormData({
+        nombre: "",
+        email: "",
+        telefono: "",
+        empresa: "",
+        mensaje: "",
+        intereses: []
+      });
+      
+      setSubmitStatus('success');
+      setSubmitMessage('¡Mensaje enviado con éxito! Te contactaremos pronto.');
+
+      console.log('🎉 Proceso completado exitosamente');
+
+    } catch (error: any) {
+      console.error('🚨 ERROR:', error);
+      
+      let errorMessage = 'Hubo un error al enviar el mensaje. Por favor, intenta nuevamente.';
+      
+      if (error?.message) {
+        errorMessage = error.message;
+      }
+      
+      setSubmitStatus('error');
+      setSubmitMessage(errorMessage);
+      
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="bg-dark text-gray-700 font-archivo pb-6 pt-32 2xl:pt-44 px-4 md:px-6 lg:px-8 xl:px-10 2xl:px-20 w-full flex flex-col justify-end 2xl:h-screen 2xl:min-h-screen" id="contacto-form">
@@ -250,25 +208,25 @@ const ContactoForm: React.FC = () => {
           ref={rightColumnRef}
           className="flex flex-col justify-center relative p-6 md:p-10 order-1 lg:order-2"
         >
-          {/* Elementos de borde para la columna derecha */}
+          {/* Elementos de borde para la columna derecha - Ahora visibles sin animación */}
           <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
-            <div className="border-element border-top absolute top-0 left-0 right-0 h-[0.25px] bg-gray-800 transform-gpu origin-center"></div>
-            <div className="border-element border-bottom absolute bottom-0 left-0 right-0 h-[0.25px] bg-gray-800 transform-gpu origin-center"></div>
-            <div className="border-element border-left absolute top-0 left-0 bottom-0 w-[0.25px] bg-gray-800 transform-gpu origin-center"></div>
-            <div className="border-element border-right absolute top-0 right-0 bottom-0 w-[0.25px] bg-gray-800 transform-gpu origin-center"></div>
+            <div className="absolute top-0 left-0 right-0 h-[0.25px] bg-gray-800"></div>
+            <div className="absolute bottom-0 left-0 right-0 h-[0.25px] bg-gray-800"></div>
+            <div className="absolute top-0 left-0 bottom-0 w-[0.25px] bg-gray-800"></div>
+            <div className="absolute top-0 right-0 bottom-0 w-[0.25px] bg-gray-800"></div>
           </div>
 
           <div className="mb-2">
-            {/* Animated title - Estilos actualizados para reducir el espacio */}
+            {/* Título sin animación */}
             <div
               ref={titleContainerRef}
               className="mb-8 md:mb-12 font-display text-gray-400 text-2xl md:text-4xl font-medium leading-none max-w-3xl"
               style={{ 
-                lineHeight: "1", // Reduce el espacio entre líneas
-                wordSpacing: "-0.5em", // Reduce el espacio entre palabras a nivel global
+                lineHeight: "1",
+                wordSpacing: "-0.5em",
               }}
             >
-              {animatedWords}
+              {titleText}
             </div>
             <p className="mb-3 text-gray-400 text-base font-archivo">Estoy interesado en...</p>
           </div>
@@ -278,20 +236,66 @@ const ContactoForm: React.FC = () => {
             {["UI", "UX", "Multimedia", "Webflow"].map((interest, index) => (
               <button
                 key={index}
+                type="button"
                 onClick={() => handleInterestToggle(interest)}
-                className={`interest-button text-sm px-4 py-1 rounded-full border font-archivo transition-colors duration-300 ${formData.intereses.includes(interest)
+                disabled={isSubmitting}
+                className={`text-sm px-4 py-1 rounded-full border font-archivo transition-colors duration-300 ${
+                  formData.intereses.includes(interest)
                     ? "bg-primary text-dark border-primary"
                     : "bg-transparent text-gray-600 border-gray-800 hover:border-gray-700"
-                  }`}
+                } ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 {interest}
               </button>
             ))}
           </div>
 
+          {/* Mensaje de estado */}
+          {submitStatus !== 'idle' && (
+            <div className={`mb-6 p-4 rounded-lg border ${
+              submitStatus === 'success' 
+                ? 'bg-green-900/20 border-green-600 text-green-400' 
+                : 'bg-red-900/20 border-red-600 text-red-400'
+            }`}>
+              <p className="text-sm font-archivo">{submitMessage}</p>
+            </div>
+          )}
+
           {/* Form container */}
           <div>
-            <form onSubmit={handleSubmit} className="space-y-6 md:space-y-8">
+            {/* Formulario oculto para Netlify (requerido para que Netlify detecte el formulario) */}
+            <form 
+              name="contacto" 
+              data-netlify="true"
+              data-netlify-honeypot="bot-field" 
+              style={{ display: 'none' }}
+            >
+              <input type="text" name="nombre" />
+              <input type="email" name="email" />
+              <input type="tel" name="telefono" />
+              <input type="text" name="empresa" />
+              <textarea name="mensaje"></textarea>
+              <input type="text" name="intereses" />
+            </form>
+
+            {/* Formulario principal */}
+            <form 
+              ref={formRef} 
+              onSubmit={handleSubmit} 
+              className="space-y-6 md:space-y-8"
+              name="contacto"
+              method="POST"
+              data-netlify="true"
+              data-netlify-honeypot="bot-field"
+            >
+              {/* Campo honeypot oculto para prevenir spam */}
+              <input type="hidden" name="form-name" value="contacto" />
+              <div style={{ display: 'none' }}>
+                <label>
+                  Don't fill this out if you're human: <input name="bot-field" />
+                </label>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <input
@@ -301,8 +305,9 @@ const ContactoForm: React.FC = () => {
                     placeholder="NOMBRE*"
                     value={formData.nombre}
                     onChange={handleInputChange}
+                    disabled={isSubmitting}
                     required
-                    className="w-full bg-transparent border-b border-gray-700 py-2 text-gray-400 focus:outline-none focus:border-gray-400 placeholder-gray-700 text-sm font-archivo transition-colors duration-300"
+                    className="w-full bg-transparent border-b border-gray-700 py-2 text-gray-400 focus:outline-none focus:border-gray-400 placeholder-gray-700 text-sm font-archivo transition-colors duration-300 disabled:opacity-50"
                   />
                 </div>
 
@@ -314,8 +319,9 @@ const ContactoForm: React.FC = () => {
                     placeholder="EMAIL*"
                     value={formData.email}
                     onChange={handleInputChange}
+                    disabled={isSubmitting}
                     required
-                    className="w-full bg-transparent border-b border-gray-700 py-2 text-gray-400 focus:outline-none focus:border-gray-400 placeholder-gray-700 text-sm font-archivo transition-colors duration-300"
+                    className="w-full bg-transparent border-b border-gray-700 py-2 text-gray-400 focus:outline-none focus:border-gray-400 placeholder-gray-700 text-sm font-archivo transition-colors duration-300 disabled:opacity-50"
                   />
                 </div>
               </div>
@@ -329,8 +335,9 @@ const ContactoForm: React.FC = () => {
                     placeholder="TELEFONO*"
                     value={formData.telefono}
                     onChange={handleInputChange}
+                    disabled={isSubmitting}
                     required
-                    className="w-full bg-transparent border-b border-gray-700 py-2 text-gray-400 focus:outline-none focus:border-gray-400 placeholder-gray-700 text-sm font-archivo transition-colors duration-300"
+                    className="w-full bg-transparent border-b border-gray-700 py-2 text-gray-400 focus:outline-none focus:border-gray-400 placeholder-gray-700 text-sm font-archivo transition-colors duration-300 disabled:opacity-50"
                   />
                 </div>
 
@@ -342,7 +349,8 @@ const ContactoForm: React.FC = () => {
                     placeholder="EMPRESA"
                     value={formData.empresa}
                     onChange={handleInputChange}
-                    className="w-full bg-transparent border-b border-gray-700 py-2 text-gray-400 focus:outline-none focus:border-gray-400 placeholder-gray-700 text-sm font-archivo transition-colors duration-300"
+                    disabled={isSubmitting}
+                    className="w-full bg-transparent border-b border-gray-700 py-2 text-gray-400 focus:outline-none focus:border-gray-400 placeholder-gray-700 text-sm font-archivo transition-colors duration-300 disabled:opacity-50"
                   />
                 </div>
               </div>
@@ -354,17 +362,33 @@ const ContactoForm: React.FC = () => {
                   placeholder="MENSAJE"
                   value={formData.mensaje}
                   onChange={handleInputChange}
+                  disabled={isSubmitting}
                   rows={4}
-                  className="w-full bg-transparent border-b border-gray-700 py-2 text-gray-400 focus:outline-none focus:border-gray-400 placeholder-gray-700 text-sm font-archivo transition-colors duration-300"
+                  className="w-full bg-transparent border-b border-gray-700 py-2 text-gray-400 focus:outline-none focus:border-gray-400 placeholder-gray-700 text-sm font-archivo transition-colors duration-300 disabled:opacity-50"
                 />
               </div>
+
+              {/* Campo oculto para intereses */}
+              <input 
+                type="hidden" 
+                name="intereses" 
+                value={formData.intereses.join(', ')} 
+              />
 
               <div className="flex flex-wrap gap-6 justify-start items-center pt-1">
                 <button
                   type="submit"
-                  className="bg-white text-black px-8 py-2 rounded-full hover:bg-gray-200 transition-colors font-archivo"
+                  disabled={isSubmitting}
+                  className="bg-white text-black px-8 py-2 rounded-full hover:bg-gray-200 transition-colors font-archivo disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
-                  ENVIAR
+                  {isSubmitting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black"></div>
+                      ENVIANDO...
+                    </>
+                  ) : (
+                    'ENVIAR'
+                  )}
                 </button>
 
                 <p className="text-[0.7rem] text-gray-700 uppercase font-archivo max-w-[300px] leading-[1rem]">
@@ -383,21 +407,21 @@ const ContactoForm: React.FC = () => {
           ref={leftColumnRef}
           className="flex flex-col justify-between lg:justify-start relative p-6 pt-48 md:p-10 order-2 lg:order-1 h-full"
         >
-          {/* Elementos de borde para la columna izquierda */}
+          {/* Elementos de borde para la columna izquierda - Ahora visibles sin animación */}
           <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
-            <div className="border-element border-top absolute top-0 left-0 right-0 h-[0.25px] bg-gray-800 transform-gpu origin-center"></div>
-            <div className="border-element border-bottom absolute bottom-0 left-0 right-0 h-[0.25px] bg-gray-800 transform-gpu origin-center"></div>
-            <div className="border-element border-left absolute top-0 left-0 bottom-0 w-[0.25px] bg-gray-800 transform-gpu origin-center"></div>
-            <div className="border-element border-right absolute top-0 right-0 bottom-0 w-[0.25px] bg-gray-800 transform-gpu origin-center"></div>
+            <div className="absolute top-0 left-0 right-0 h-[0.25px] bg-gray-800"></div>
+            <div className="absolute bottom-0 left-0 right-0 h-[0.25px] bg-gray-800"></div>
+            <div className="absolute top-0 left-0 bottom-0 w-[0.25px] bg-gray-800"></div>
+            <div className="absolute top-0 right-0 bottom-0 w-[0.25px] bg-gray-800"></div>
           </div>
 
-          {/* Arrow component - visible en todos los breakpoints, ahora en la esquina superior izquierda en móvil */}
+          {/* Arrow component */}
           <div className="block absolute top-1 right-0 lg:bottom-0 lg:right-0 lg:top-auto lg:left-auto w-48 sm:w-64 md:w-96 h-48 sm:h-64 md:h-96">
             <ArrowAni />
           </div>
 
-          {/* Contenedor de información de contacto - alineado al pie en móvil, alineado arriba en desktop */}
-          <div className="space-y-6 md:space-y-8 font-archivo text-gray-400 contact-info mt-auto lg:mt-0">
+          {/* Contenedor de información de contacto - Sin animación */}
+          <div className="space-y-6 md:space-y-8 font-archivo text-gray-400 mt-auto lg:mt-0">
             <div>
               <p className="text-sm uppercase text-gray-600 mb-1">UBICACION</p>
               <p className="text-sm">24 DE LA THAN STREET,</p>
@@ -412,7 +436,7 @@ const ContactoForm: React.FC = () => {
               <p className="text-sm uppercase text-gray-600 mb-1">CONTACTOS</p>
               <div className="group cursor-pointer">
                 <SlideTextOnHover 
-                  originalText={<p className="text-sm">INFO@ANTAGONIK.COM</p>}
+                  originalText={<p className="text-sm">ANTAGONIK.STUDIO@GMAIL.COM</p>}
                   hoverText={<p className="text-sm text-white">ESCRÍBENOS</p>}
                 />
               </div>
@@ -454,7 +478,7 @@ const ContactoForm: React.FC = () => {
       </div>
 
       <div className="w-full mx-auto mt-4 md:mt-8 flex justify-between items-center text-xs text-gray-700 font-archivo">
-        {/* Contenedores para móvil - en una sola fila con un grupo a la izquierda y otro a la derecha */}
+        {/* Contenedores para móvil */}
         <div className="md:hidden flex flex-col">
           <p className="mb-0.5">© ANTAGONIK 2025</p>
           <Link href="/politica-de-privacidad" className="hover:underline text-gray-700">
@@ -469,7 +493,7 @@ const ContactoForm: React.FC = () => {
           </p>
         </div>
         
-        {/* Elementos para desktop (md en adelante) - mantiene la maquetación original */}
+        {/* Elementos para desktop */}
         <p className="hidden md:block">© ANTAGONIK 2025</p>
         <Link href="/politica-de-privacidad" className="hidden md:block hover:underline text-gray-700">
           POLÍTICA DE PRIVACIDAD
