@@ -1,4 +1,6 @@
-import React, { useRef, Suspense, useEffect, useState, useMemo, ReactNode } from 'react';
+'use client';
+
+import React, { useRef, Suspense, useEffect, useState, useMemo, ReactNode, useCallback } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import {
   OrbitControls,
@@ -7,7 +9,36 @@ import {
   MeshTransmissionMaterial,
   Text
 } from '@react-three/drei';
-import * as THREE from 'three';
+import { 
+  Group, 
+  Mesh, 
+  Vector3, 
+  Euler, 
+  Object3D,
+  BufferGeometry,
+  Material
+} from 'three';
+
+// Throttle utility para event listeners
+const throttle = (func: Function, limit: number) => {
+  let inThrottle: boolean;
+  return function(this: any, ...args: any[]) {
+    if (!inThrottle) {
+      func.apply(this, args);
+      inThrottle = true;
+      setTimeout(() => inThrottle = false, limit);
+    }
+  }
+};
+
+// Debounce para resize events
+const debounce = (func: Function, wait: number) => {
+  let timeout: NodeJS.Timeout;
+  return function(this: any, ...args: any[]) {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(this, args), wait);
+  };
+};
 
 // Definición de tipos para las configuraciones de malla
 interface MeshConfig {
@@ -24,26 +55,9 @@ interface MeshConfig {
   };
 }
 
-// Model component that loads and renders the 3D model
-function Model() {
-  const gltf = useGLTF('/models/break.glb');
-  const groupRef = useRef<THREE.Group>(null);
-
-  // CORRECCIÓN: Usa el tipo correcto para la referencia del material
-  const materialRef = useRef<any>(null);
-  const [meshes, setMeshes] = useState<THREE.Mesh[]>([]);
-  const [initialized, setInitialized] = useState(false);
-
-  // Mouse and scroll position state
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const [scrollProgress, setScrollProgress] = useState(0);
-
-  // Get viewport dimensions and determine if mobile
-  const { viewport, size } = useThree();
-  const isMobile = size.width < 640;
-
-  // Define mesh configurations using useMemo to prevent recreation
-  const meshConfigs = useMemo<MeshConfig[]>(() => [
+// Hook personalizado para configuraciones de malla
+const useMeshConfigs = (): MeshConfig[] => {
+  return useMemo<MeshConfig[]>(() => [
     {
       desktop: {
         positionOffset: [0.7, 0.3, 1],
@@ -110,24 +124,65 @@ function Model() {
       }
     }
   ], []);
+};
+
+// Model component that loads and renders the 3D model
+function Model() {
+  const gltf = useGLTF('/models/break.glb');
+  const groupRef = useRef<Group>(null);
+  const materialRef = useRef<any>(null);
+  const [meshes, setMeshes] = useState<Mesh[]>([]);
+  const [initialized, setInitialized] = useState(false);
+
+  // Estados con throttling para mejor performance
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [scrollProgress, setScrollProgress] = useState(0);
+
+  // Get viewport dimensions and determine if mobile
+  const { viewport, size } = useThree();
+  const isMobile = size.width < 640;
+
+  // Usar hook personalizado para configuraciones
+  const meshConfigs = useMeshConfigs();
 
   // Store original mesh data for restoration
   const originalMeshData = useRef<{
-    mesh: THREE.Mesh;
-    position: THREE.Vector3;
-    scale: THREE.Vector3;
-    rotation: THREE.Euler;
+    mesh: Mesh;
+    position: Vector3;
+    scale: Vector3;
+    rotation: Euler;
   }[]>([]);
+
+  // Callbacks memoizados para event listeners
+  const updateMousePosition = useCallback(
+    throttle((e: MouseEvent) => {
+      setMousePosition({
+        x: (e.clientX / window.innerWidth) * 2 - 1,
+        y: -((e.clientY / window.innerHeight) * 2 - 1)
+      });
+    }, 16), // ~60fps
+    []
+  );
+
+  const updateScrollProgress = useCallback(
+    throttle(() => {
+      const scrollTop = window.scrollY;
+      const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const progress = Math.min(Math.max(scrollTop / scrollHeight, 0), 1);
+      setScrollProgress(progress);
+    }, 16), // ~60fps
+    []
+  );
 
   // Initialize meshes and apply material
   useEffect(() => {
     if (gltf.scene && materialRef.current) {
-      const foundMeshes: THREE.Mesh[] = [];
+      const foundMeshes: Mesh[] = [];
 
       // Get all meshes and apply material
-      gltf.scene.traverse((child: THREE.Object3D) => {
-        if ((child as THREE.Mesh).isMesh) {
-          const mesh = child as THREE.Mesh;
+      gltf.scene.traverse((child: Object3D) => {
+        if ((child as Mesh).isMesh) {
+          const mesh = child as Mesh;
           // Store original data in a ref to maintain across renders
           originalMeshData.current.push({
             mesh,
@@ -184,36 +239,27 @@ function Model() {
     };
   }, []);
 
-  // Mouse movement listener
+  // Event listeners optimizados
   useEffect(() => {
-    const updateMousePosition = (e: MouseEvent) => {
-      setMousePosition({
-        x: (e.clientX / window.innerWidth) * 2 - 1,
-        y: -((e.clientY / window.innerHeight) * 2 - 1)
-      });
-    };
-
     window.addEventListener('mousemove', updateMousePosition);
     return () => window.removeEventListener('mousemove', updateMousePosition);
-  }, []);
+  }, [updateMousePosition]);
 
-  // Scroll listener
   useEffect(() => {
-    const updateScrollProgress = () => {
-      const scrollTop = window.scrollY;
-      const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
-      const progress = Math.min(Math.max(scrollTop / scrollHeight, 0), 1);
-      setScrollProgress(progress);
-    };
-
     updateScrollProgress();
     window.addEventListener('scroll', updateScrollProgress);
     return () => window.removeEventListener('scroll', updateScrollProgress);
-  }, []);
+  }, [updateScrollProgress]);
 
-  // Animation loop
+  // Animation loop optimizado con early returns
   useFrame(() => {
     if (!initialized || meshes.length === 0) return;
+
+    // Batch calculations para mejor performance
+    const mouseInfluence = {
+      x: mousePosition.x * 0.15,
+      y: mousePosition.y * 0.15
+    };
 
     // Animate each mesh
     meshes.forEach((mesh, index) => {
@@ -224,7 +270,6 @@ function Model() {
 
       // Set visibility for mobile
       if (isMobile) {
-        // Afirma que config es de tipo mobile cuando isMobile es true
         const mobileConfig = config as MeshConfig['mobile'];
         mesh.visible = mobileConfig.visible;
         if (!mesh.visible) return;
@@ -258,7 +303,7 @@ function Model() {
         mesh.rotation.y += (targetRotationY - mesh.rotation.y) * 0.1;
       }
 
-      // Calculate scroll-based transformations
+      // Pre-calculate scroll-based values
       const zScrollFactor = 30 + (index * 4);
       const zOffset = scrollProgress * zScrollFactor;
 
@@ -283,8 +328,8 @@ function Model() {
 
     // Rotate the group based on mouse position
     if (groupRef.current) {
-      const targetRotationX = -mousePosition.y * 0.15;
-      const targetRotationY = -mousePosition.x * 0.15;
+      const targetRotationX = -mouseInfluence.y;
+      const targetRotationY = -mouseInfluence.x;
 
       groupRef.current.rotation.x += (targetRotationX - groupRef.current.rotation.x) * 0.05;
       groupRef.current.rotation.y += (targetRotationY - groupRef.current.rotation.y) * 0.05;
@@ -321,380 +366,170 @@ function Model() {
   );
 }
 
-// Make sure to preload the model to avoid loading issues
+// Preload del modelo para evitar loading issues
 useGLTF.preload('/models/break.glb');
 
 // Definición de tipos para las referencias de texto
-type TextRef = React.RefObject<THREE.Mesh<THREE.BufferGeometry, THREE.Material | THREE.Material[]>>;
+type TextRef = React.RefObject<Mesh<BufferGeometry, Material | Material[]>>;
 
-// Componente TextElements
-const TextElements = () => {
+// TextElements optimizado con mejor gestión de state
+const TextElements = React.memo(() => {
   const fontSemibold = "/fonts/ClashDisplay-Semibold.ttf";
   const { viewport, size } = useThree();
-  // Usamos el tamaño real de la ventana en lugar del viewport de Three.js
   const isMobile = size.width < 640;
 
   // Referencias para medir el ancho del texto
-  const rompeRef = useRef<THREE.Mesh>(null);
-  const mosRef = useRef<THREE.Mesh>(null);
-  const lasRef = useRef<THREE.Mesh>(null);
-  const reglasRef = useRef<THREE.Mesh>(null);
-  const rompemosRef = useRef<THREE.Mesh>(null);
-  const lasReglasRef = useRef<THREE.Mesh>(null);
+  const rompeRef = useRef<Mesh>(null);
+  const mosRef = useRef<Mesh>(null);
+  const lasRef = useRef<Mesh>(null);
+  const reglasRef = useRef<Mesh>(null);
+  const rompemosRef = useRef<Mesh>(null);
+  const lasReglasRef = useRef<Mesh>(null);
 
-  // Estado para almacenar el factor de escala y posiciones
+  // Estado para configuración de texto
   const [textConfig, setTextConfig] = useState({
     scale: 1,
     desktopOffsetX: 1.11,
     mobileOffsetX: 1.4
   });
 
-  // Valores iniciales para escala base y offsets
-  const initialConfig = useMemo(() => ({
-    scale: 1,
-    desktopOffsetX: 1.11,
-    mobileOffsetX: 1.4
-  }), []);
-
-  // Calcular el límite izquierdo del área visible con margen de seguridad
-  const leftEdge = -viewport.width / 2;
-  const safeMargin = 0.0;
-  const leftMargin = leftEdge + safeMargin;
-
-  // Calcular el ancho disponible (viewport.width menos márgenes de seguridad)
-  const availableWidth = viewport.width - (safeMargin * 2);
-
-  // Ajustar el tamaño y posición del texto según el espacio disponible
-  useFrame(() => {
-    // Determinar el ancho total necesario para los textos
-    let needsUpdate = false;
-    let newScale = textConfig.scale;
-    let newDesktopOffsetX = textConfig.desktopOffsetX;
-    let newMobileOffsetX = textConfig.mobileOffsetX;
-
-    // Intentar restaurar hacia el tamaño original cuando hay espacio
-    const shouldTryRestore = viewport.width > 3.5; // Más espacio que el mínimo
-
-    if (isMobile) {
-      // Obtener anchos actuales de los textos para mobile
-      const rompeMesh = rompeRef.current as unknown as THREE.Mesh;
-      const reglasMesh = reglasRef.current as unknown as THREE.Mesh;
-      const lasMesh = lasRef.current as unknown as THREE.Mesh;
-
-      const rompeWidth = (rompeMesh?.geometry?.boundingBox?.max?.x ?? 0) - (rompeMesh?.geometry?.boundingBox?.min?.x ?? 0);
-      const reglasWidth = (reglasMesh?.geometry?.boundingBox?.max?.x ?? 0) - (reglasMesh?.geometry?.boundingBox?.min?.x ?? 0);
-      const lasWidth = (lasMesh?.geometry?.boundingBox?.max?.x ?? 0) - (lasMesh?.geometry?.boundingBox?.min?.x ?? 0);
-
-      // Comprobar si "LAS" + "REGLAS" supera el espacio disponible
-      const totalLasReglasWidth = lasWidth + reglasWidth + 0.3; // Añadimos un pequeño margen
-
-      // Calcular si el texto "ROMPE-" cabe en el espacio disponible
-      const rompeRequiredWidth = rompeWidth + 0.3;
-
-      // Calcular espacio necesario para el texto "LAS" en su posición actual
-      const lasPosition = leftMargin + newMobileOffsetX * newScale;
-      const lasEndPosition = lasPosition + (lasWidth * newScale);
-      const rightEdge = leftEdge + viewport.width - safeMargin;
-
-      // Determinar el factor de escala óptimo para que todo quepa
-      const optimalScale = Math.min(
-        availableWidth / Math.max(rompeRequiredWidth, totalLasReglasWidth),
-        initialConfig.scale // No aumentar más allá del tamaño original
-      );
-
-      // Ajustar el offset de "LAS" si es necesario para que no se salga del viewport
-      if (lasEndPosition > rightEdge) {
-        // Calcular un nuevo offset que mantenga "LAS" dentro del viewport
-        const maxOffset = (rightEdge - leftMargin - (lasWidth * optimalScale)) / optimalScale;
-        newMobileOffsetX = Math.max(0.8, Math.min(newMobileOffsetX, maxOffset));
-        needsUpdate = true;
-      } else if (shouldTryRestore) {
-        // Intentar restaurar hacia el offset original si hay espacio
-        const targetOffset = initialConfig.mobileOffsetX;
-        if (Math.abs(newMobileOffsetX - targetOffset) > 0.01) {
-          newMobileOffsetX = newMobileOffsetX + (targetOffset - newMobileOffsetX) * 0.1; // Suavizar la transición
-          needsUpdate = true;
-        }
-      }
-
-      // Actualizar la escala con un umbral para evitar actualizaciones constantes
-      if (Math.abs(optimalScale - newScale) > 0.01) {
-        // Si hay más espacio, aumentar gradualmente hacia 1; si hay menos, reducir inmediatamente
-        if (optimalScale > newScale) {
-          newScale = newScale + (optimalScale - newScale) * 0.1; // Suavizar el aumento
-        } else {
-          newScale = optimalScale; // Reducción inmediata para evitar desbordamiento
-        }
-        newScale = Math.max(0.5, newScale); // Limitar la reducción para mantener legibilidad
-        needsUpdate = true;
-      }
-    } else {
-      // Para escritorio/tablet
-      const rompemosMesh = rompemosRef.current as unknown as THREE.Mesh;
-      const lasReglasMesh = lasReglasRef.current as unknown as THREE.Mesh;
-
-      const rompemosWidth = (rompemosMesh?.geometry?.boundingBox?.max?.x ?? 0) - (rompemosMesh?.geometry?.boundingBox?.min?.x ?? 0);
-      const lasReglasWidth = (lasReglasMesh?.geometry?.boundingBox?.max?.x ?? 0) - (lasReglasMesh?.geometry?.boundingBox?.min?.x ?? 0);
-
-      // Calcular posición del segundo texto con el offset actual
-      const secondTextPosition = leftMargin + (newDesktopOffsetX * newScale);
-      const secondTextRightEdge = secondTextPosition + (lasReglasWidth * newScale);
-
-      // Calcular el borde derecho del viewport
-      const rightEdge = leftEdge + viewport.width - safeMargin;
-
-      // Verificar si el texto se sale por la derecha
-      if (secondTextRightEdge > rightEdge) {
-        // Calcular un nuevo offset que mantenga el texto dentro del viewport
-        const maxTextWidth = Math.max(rompemosWidth, lasReglasWidth);
-
-        // Calcular factor de escala óptimo
-        const optimalScale = Math.min(
-          (availableWidth - newDesktopOffsetX) / maxTextWidth,
-          (availableWidth / 2) / rompemosWidth, // Asegurar que el primer texto quede bien
-          initialConfig.scale // No aumentar más allá del tamaño original
-        );
-
-        // Si el texto sigue sin caber, ajustar el offset
-        if (secondTextRightEdge * (optimalScale / newScale) > rightEdge) {
-          // Calcular un offset máximo que mantenga el texto dentro
-          const maxOffset = Math.max(0.5, (rightEdge - leftMargin - (lasReglasWidth * optimalScale)) / optimalScale);
-          newDesktopOffsetX = Math.min(newDesktopOffsetX, maxOffset);
-          needsUpdate = true;
-        } else if (shouldTryRestore) {
-          // Intentar restaurar hacia el offset original si hay espacio
-          const targetOffset = initialConfig.desktopOffsetX;
-          if (Math.abs(newDesktopOffsetX - targetOffset) > 0.01) {
-            newDesktopOffsetX = newDesktopOffsetX + (targetOffset - newDesktopOffsetX) * 0.1; // Suavizar la transición
-            needsUpdate = true;
-          }
-        }
-
-        // Actualizar la escala si es necesario
-        if (Math.abs(optimalScale - newScale) > 0.01) {
-          // Si hay más espacio, aumentar gradualmente; si hay menos, reducir inmediatamente
-          if (optimalScale > newScale) {
-            newScale = newScale + (optimalScale - newScale) * 0.1; // Suavizar el aumento
-          } else {
-            newScale = optimalScale; // Reducción inmediata para evitar desbordamiento
-          }
-          newScale = Math.max(0.5, newScale);
-          needsUpdate = true;
-        }
-      } else if (shouldTryRestore) {
-        // Restaurar gradualmente hacia los valores originales si hay suficiente espacio
-        const targetScale = initialConfig.scale;
-        const targetOffset = initialConfig.desktopOffsetX;
-
-        // Verificar si el texto cabe con los valores restaurados
-        const projectedRightEdge = leftMargin + (targetOffset * targetScale) + (lasReglasWidth * targetScale);
-
-        if (projectedRightEdge < rightEdge) {
-          // Hay suficiente espacio para restaurar gradualmente
-          if (Math.abs(newScale - targetScale) > 0.01) {
-            newScale = newScale + (targetScale - newScale) * 0.1; // Suavizar la transición
-            needsUpdate = true;
-          }
-
-          if (Math.abs(newDesktopOffsetX - targetOffset) > 0.01) {
-            newDesktopOffsetX = newDesktopOffsetX + (targetOffset - newDesktopOffsetX) * 0.1; // Suavizar la transición
-            needsUpdate = true;
-          }
-        }
-      }
-    }
-
-    // Actualizar la configuración si es necesario
-    if (needsUpdate) {
-      setTextConfig({
-        scale: newScale,
-        desktopOffsetX: newDesktopOffsetX,
-        mobileOffsetX: newMobileOffsetX
-      });
-    }
-  });
+  // Cálculos memoizados para viewport
+  const viewportConfig = useMemo(() => {
+    const leftEdge = -viewport.width / 2;
+    const safeMargin = 0.0;
+    const leftMargin = leftEdge + safeMargin;
+    const availableWidth = viewport.width - (safeMargin * 2);
+    
+    return { leftEdge, safeMargin, leftMargin, availableWidth };
+  }, [viewport.width]);
 
   // Calculamos tamaños de fuente escalados
-  const mobileFontSize = 0.78 * textConfig.scale;
-  const desktopFontSize1 = 0.75 * textConfig.scale;
-  const desktopFontSize2 = 0.75 * textConfig.scale;
+  const fontSizes = useMemo(() => ({
+    mobileFontSize: 0.78 * textConfig.scale,
+    desktopFontSize1: 0.75 * textConfig.scale,
+    desktopFontSize2: 0.75 * textConfig.scale
+  }), [textConfig.scale]);
 
   // Espaciado vertical base que se escalará
-  const baseVerticalGapMobile = 0.64;
-  const baseVerticalGapDesktop = 0.7; // Espaciado entre ROMPEMOS y LAS REGLAS
+  const spacing = useMemo(() => ({
+    baseVerticalGapMobile: 0.64,
+    baseVerticalGapDesktop: 0.7
+  }), []);
 
   if (isMobile) {
-    // Posiciones escaladas para mantener la proporción original
-    const mobileTextGap = baseVerticalGapMobile * textConfig.scale; // Espacio entre textos que se escala
-
-    // MODIFICACIÓN AQUÍ: Reducción del offset de "LAS" para acercarlo a "MOS"
-    // Ajusta este multiplicador según la separación deseada (0.7 es más cerca que 1.4)
-    const lasHorizontalSpacing = 1.4; // Puedes ajustar este valor entre 0.1 y 1.4 según desees
+    const mobileTextGap = spacing.baseVerticalGapMobile * textConfig.scale;
+    const lasHorizontalSpacing = 1.4;
     const lasTextOffset = textConfig.mobileOffsetX * textConfig.scale * lasHorizontalSpacing;
 
     return (
       <>
         <Text
           ref={rompeRef}
-          position={[leftMargin, 1.05, 0]}
+          position={[viewportConfig.leftMargin, 1.05, 0]}
           color="#B6BCC7"
           textAlign="left"
           anchorX="left"
           anchorY="middle"
           font={fontSemibold}
-          fontSize={mobileFontSize}
-          whiteSpace="nowrap" // Impide el salto de línea
+          fontSize={fontSizes.mobileFontSize}
+          whiteSpace="nowrap"
         >
           ROMPE-
         </Text>
         <Text
           ref={mosRef}
-          position={[leftMargin, 1.05 - mobileTextGap, 0]}
+          position={[viewportConfig.leftMargin, 1.05 - mobileTextGap, 0]}
           color="#B6BCC7"
           textAlign="left"
           anchorX="left"
           anchorY="middle"
           font={fontSemibold}
-          fontSize={mobileFontSize}
-          whiteSpace="nowrap" // Impide el salto de línea
+          fontSize={fontSizes.mobileFontSize}
+          whiteSpace="nowrap"
         >
           MOS
         </Text>
         <Text
           ref={lasRef}
-          position={[leftMargin + lasTextOffset, 1.05 - mobileTextGap, 0]}
+          position={[viewportConfig.leftMargin + lasTextOffset, 1.05 - mobileTextGap, 0]}
           color="#FF5741"
           textAlign="left"
           anchorX="left"
           anchorY="middle"
           font={fontSemibold}
-          fontSize={mobileFontSize}
-          whiteSpace="nowrap" // Impide el salto de línea
+          fontSize={fontSizes.mobileFontSize}
+          whiteSpace="nowrap"
         >
           LAS
         </Text>
         <Text
           ref={reglasRef}
-          position={[leftMargin, 1.05 - (mobileTextGap * 2), 0]}
+          position={[viewportConfig.leftMargin, 1.05 - (mobileTextGap * 2), 0]}
           color="#FF5741"
           textAlign="left"
           anchorX="left"
           anchorY="middle"
           font={fontSemibold}
-          fontSize={mobileFontSize}
-          whiteSpace="nowrap" // Impide el salto de línea
+          fontSize={fontSizes.mobileFontSize}
+          whiteSpace="nowrap"
         >
           REGLAS
         </Text>
       </>
     );
   } else {
-    // Versión de escritorio con escalado automático y posicionamiento adaptativo
-    const secondTextOffset = textConfig.desktopOffsetX * textConfig.scale; // Desplazamiento horizontal ajustado
-    const verticalGap = baseVerticalGapDesktop * textConfig.scale; // Espaciado vertical escalado
+    const secondTextOffset = textConfig.desktopOffsetX * textConfig.scale;
+    const verticalGap = spacing.baseVerticalGapDesktop * textConfig.scale;
 
     return (
       <>
         <Text
           ref={rompemosRef}
-          position={[leftMargin, verticalGap, 0]}
+          position={[viewportConfig.leftMargin, verticalGap, 0]}
           color="#B6BCC7"
           textAlign="left"
           anchorX="left"
           anchorY="middle"
           font={fontSemibold}
-          fontSize={desktopFontSize1}
-          whiteSpace="nowrap" // Impide el salto de línea
+          fontSize={fontSizes.desktopFontSize1}
+          whiteSpace="nowrap"
         >
           ROMPEMOS
         </Text>
         <Text
           ref={lasReglasRef}
-          position={[leftMargin + secondTextOffset, 0, 0]}
+          position={[viewportConfig.leftMargin + secondTextOffset, 0, 0]}
           color="#B6BCC7"
           textAlign="left"
           anchorX="left"
           anchorY="middle"
           font={fontSemibold}
-          fontSize={desktopFontSize2}
-          whiteSpace="nowrap" // Impide el salto de línea
+          fontSize={fontSizes.desktopFontSize2}
+          whiteSpace="nowrap"
         >
           LAS REGLAS
         </Text>
       </>
     );
   }
-};
+});
 
-// Simple loader component
-function Loader() {
+// Loader simplificado
+const Loader = React.memo(() => {
   return (
     <mesh>
-      <sphereGeometry args={[1, 16, 16]} />
+      <sphereGeometry args={[1, 8, 8]} />
       <meshStandardMaterial color="#444444" wireframe />
     </mesh>
   );
-}
+});
 
-// Global styles
-const globalStyles = `
-  @font-face {
-    font-family: 'ClashDisplay-Regular';
-    src: url('/fonts/ClashDisplay-Regular.ttf') format('truetype');
-    font-weight: normal;
-    font-style: normal;
-    font-display: swap;
-  }
-  
-  @font-face {
-    font-family: 'ClashDisplay-Semibold';
-    src: url('/fonts/ClashDisplay-Semibold.ttf') format('truetype');
-    font-weight: 600;
-    font-style: normal;
-    font-display: swap;
-  }
-`;
-
-// Create a React context to persist state between page navigation
-const ThreeDStateContext = React.createContext<{
-  viewportSize: string;
-}>({ viewportSize: 'desktop' });
-
-export function ThreeDProvider({ children }: { children: ReactNode }) {
-  const [viewportSize, setViewportSize] = useState('desktop');
-
-  useEffect(() => {
-    const checkViewportSize = () => {
-      const width = window.innerWidth;
-      if (width < 640) {
-        setViewportSize('mobile');
-      } else if (width >= 640 && width <= 1023) {
-        setViewportSize('tablet');
-      } else {
-        setViewportSize('desktop');
-      }
-    };
-
-    checkViewportSize();
-    window.addEventListener('resize', checkViewportSize);
-    return () => window.removeEventListener('resize', checkViewportSize);
-  }, []);
-
-  const value = { viewportSize };
-
-  return (
-    <ThreeDStateContext.Provider value={value}>
-      {children}
-    </ThreeDStateContext.Provider>
-  );
-}
-
+// Componente principal optimizado
 export default function HeroBackground() {
-  // Use context or state management if this component is unmounted and remounted
   const [viewportSize, setViewportSize] = useState('desktop');
 
-  useEffect(() => {
-    const checkViewportSize = () => {
+  const checkViewportSize = useCallback(
+    debounce(() => {
       const width = window.innerWidth;
       if (width < 640) {
         setViewportSize('mobile');
@@ -703,35 +538,49 @@ export default function HeroBackground() {
       } else {
         setViewportSize('desktop');
       }
-    };
+    }, 100),
+    []
+  );
 
+  useEffect(() => {
     checkViewportSize();
     window.addEventListener('resize', checkViewportSize);
     return () => window.removeEventListener('resize', checkViewportSize);
-  }, []);
+  }, [checkViewportSize]);
 
   // Calculate height class based on viewport size
-  const heightClass = viewportSize === 'mobile' ? 'h-[600px]' :
-    viewportSize === 'tablet' ? 'h-[500px]' : 'h-full';
+  const heightClass = useMemo(() => {
+    return viewportSize === 'mobile' ? 'h-[600px]' :
+           viewportSize === 'tablet' ? 'h-[500px]' : 'h-full';
+  }, [viewportSize]);
 
-  // Key for Canvas to force remount if needed
-  const canvasKey = React.useRef(Math.random().toString()).current;
+  // Estilos globales memoizados
+  const globalStyles = useMemo(() => `
+    @font-face {
+      font-family: 'ClashDisplay-Regular';
+      src: url('/fonts/ClashDisplay-Regular.ttf') format('truetype');
+      font-weight: normal;
+      font-style: normal;
+      font-display: swap;
+    }
+    
+    @font-face {
+      font-family: 'ClashDisplay-Semibold';
+      src: url('/fonts/ClashDisplay-Semibold.ttf') format('truetype');
+      font-weight: 600;
+      font-style: normal;
+      font-display: swap;
+    }
+  `, []);
 
   return (
     <React.Fragment>
       <style dangerouslySetInnerHTML={{ __html: globalStyles }} />
       <div className={`inset-0 w-full -z-10 px-4 md:px-6 lg:px-8 xl:px-10 2xl:px-20 ${heightClass}`}>
         <Canvas
-          key={canvasKey}
           camera={{ position: [0, 0, 5], fov: 50 }}
           className="w-full h-full"
-          // Force Three.js to maintain state when component is unmounted temporarily
           frameloop="always"
-          onCreated={state => {
-            // Store the state in window for persistence
-            // @ts-ignore
-            window.__threeState = state;
-          }}
         >
           <color attach="background" args={['#000000']} />
           <ambientLight intensity={0.5} />
