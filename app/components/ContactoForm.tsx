@@ -120,7 +120,7 @@ const ContactoForm: React.FC = () => {
     setSubmitStatus('idle');
 
     try {
-      console.log('🚀 Enviando formulario con Netlify Forms...');
+      console.log('🚀 Enviando formulario con Netlify Functions...');
       
       // Validar campos requeridos
       if (!formData.nombre.trim()) {
@@ -141,28 +141,32 @@ const ContactoForm: React.FC = () => {
 
       console.log('✅ Validaciones pasadas');
 
-      // Preparar datos para Netlify Forms
-      const formDataToSend = new FormData();
-      formDataToSend.append('form-name', 'contact'); // ✅ CAMBIADO: contacto → contact
-      formDataToSend.append('nombre', formData.nombre.trim());
-      formDataToSend.append('email', formData.email.trim().toLowerCase());
-      formDataToSend.append('telefono', formData.telefono.trim());
-      formDataToSend.append('empresa', formData.empresa.trim() || 'No especificada');
-      formDataToSend.append('mensaje', formData.mensaje.trim() || 'Sin mensaje adicional');
-      formDataToSend.append('intereses', formData.intereses.length > 0 ? formData.intereses.join(', ') : 'No especificados');
+      // Preparar datos para Netlify Function
+      const dataToSend = {
+        nombre: formData.nombre.trim(),
+        email: formData.email.trim().toLowerCase(),
+        telefono: formData.telefono.trim(),
+        empresa: formData.empresa.trim() || 'No especificada',
+        mensaje: formData.mensaje.trim() || 'Sin mensaje adicional',
+        intereses: formData.intereses.length > 0 ? formData.intereses : ['No especificados']
+      };
 
-      // Enviar a Netlify Forms
-      const response = await fetch('/', {
+      // Enviar a Netlify Function
+      const response = await fetch('/.netlify/functions/contact', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams(formDataToSend as any).toString()
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(dataToSend)
       });
 
+      const result = await response.json();
+
       if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${response.statusText}`);
+        throw new Error(result.details || result.error || `Error ${response.status}`);
       }
 
-      console.log('✅ Formulario enviado correctamente a Netlify');
+      console.log('✅ Formulario enviado correctamente a Netlify Function');
 
       // ÉXITO - Limpiar formulario
       setFormData({
@@ -263,39 +267,12 @@ const ContactoForm: React.FC = () => {
 
           {/* Form container */}
           <div>
-            {/* Formulario oculto para Netlify (requerido para que Netlify detecte el formulario) */}
-            <form 
-              name="contact"  
-              data-netlify="true"
-              data-netlify-honeypot="bot-field" 
-              style={{ display: 'none' }}
-            >
-              <input type="text" name="nombre" />
-              <input type="email" name="email" />
-              <input type="tel" name="telefono" />
-              <input type="text" name="empresa" />
-              <textarea name="mensaje"></textarea>
-              <input type="text" name="intereses" />
-            </form>
-
             {/* Formulario principal */}
             <form 
               ref={formRef} 
               onSubmit={handleSubmit} 
               className="space-y-6 md:space-y-8"
-              name="contact"
-              method="POST"
-              data-netlify="true"
-              data-netlify-honeypot="bot-field"
             >
-              {/* Campo honeypot oculto para prevenir spam */}
-              <input type="hidden" name="form-name" value="contact" />
-              <div style={{ display: 'none' }}>
-                <label>
-                  Don't fill this out if you're human: <input name="bot-field" />
-                </label>
-              </div>
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <input
@@ -367,13 +344,6 @@ const ContactoForm: React.FC = () => {
                   className="w-full bg-transparent border-b border-gray-700 py-2 text-gray-400 focus:outline-none focus:border-gray-400 placeholder-gray-700 text-sm font-archivo transition-colors duration-300 disabled:opacity-50"
                 />
               </div>
-
-              {/* Campo oculto para intereses */}
-              <input 
-                type="hidden" 
-                name="intereses" 
-                value={formData.intereses.join(', ')} 
-              />
 
               <div className="flex flex-wrap gap-6 justify-start items-center pt-1">
                 <button
