@@ -143,7 +143,7 @@ const ContactoForm: React.FC = () => {
 
       // Preparar datos para Netlify Forms
       const formDataToSend = new FormData();
-      formDataToSend.append('form-name', 'contacto'); // Nombre del formulario
+      formDataToSend.append('form-name', 'contact'); // ✅ CAMBIADO: contacto → contact
       formDataToSend.append('nombre', formData.nombre.trim());
       formDataToSend.append('email', formData.email.trim().toLowerCase());
       formDataToSend.append('telefono', formData.telefono.trim());
@@ -265,7 +265,7 @@ const ContactoForm: React.FC = () => {
           <div>
             {/* Formulario oculto para Netlify (requerido para que Netlify detecte el formulario) */}
             <form 
-              name="contacto" 
+              name="contact"  
               data-netlify="true"
               data-netlify-honeypot="bot-field" 
               style={{ display: 'none' }}
@@ -283,13 +283,13 @@ const ContactoForm: React.FC = () => {
               ref={formRef} 
               onSubmit={handleSubmit} 
               className="space-y-6 md:space-y-8"
-              name="contacto"
+              name="contact"
               method="POST"
               data-netlify="true"
               data-netlify-honeypot="bot-field"
             >
               {/* Campo honeypot oculto para prevenir spam */}
-              <input type="hidden" name="form-name" value="contacto" />
+              <input type="hidden" name="form-name" value="contact" />
               <div style={{ display: 'none' }}>
                 <label>
                   Don't fill this out if you're human: <input name="bot-field" />
