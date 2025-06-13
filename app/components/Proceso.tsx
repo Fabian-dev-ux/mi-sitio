@@ -337,7 +337,7 @@ const ProcesoSectionSticky: React.FC = () => {
           <Encabezado 
             numero="03" 
             seccion="Proceso" 
-            titulo="Un enfoque estructurado para garantizar el éxito de cada proyecto" 
+            titulo="Un enfoque estructurado y metodológico para garantizar el éxito sostenible de cada proyecto digital" 
           />
 
           {/* Navegación del carousel */}
@@ -415,7 +415,7 @@ const ProcesoSectionSticky: React.FC = () => {
         <Encabezado 
           numero="03" 
           seccion="Proceso" 
-          titulo="Un enfoque estructurado para garantizar el éxito de cada proyecto" 
+          titulo="Un enfoque estructurado para garantizar el éxito de cada proyecto digital" 
         />
 
         {/* Contenedor sticky */}
