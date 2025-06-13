@@ -641,7 +641,7 @@ const Proyectos: React.FC = () => {
 
   return (
     <section ref={projectsContainerRef} className="bg-dark text-white w-full py-2 px-4 md:px-6 lg:px-8 xl:px-10 2xl:px-20 pt-10 md:pt-16 lg:pt-20  2xl:pt-32" id="proyectos">
-      <Encabezado numero="02" seccion="Proyectos" titulo="Convertimos los desafíos en oportunidades de crear algo memorable" />
+      <Encabezado numero="02" seccion="Proyectos" titulo="Convertimos los retos creativos en oportunidades de crear algo memorable" />
 
       <div className="relative grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8 mt-12 md:mt-16 lg:mt-24 2xl:mt-32" style={{ overflow: 'visible' }}>
         <div className="hidden 2xl:flex md:col-span-1 flex-col justify-between relative">
