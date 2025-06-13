@@ -430,7 +430,7 @@ const ContactoForm: React.FC = () => {
                     type="tel"
                     id="telefono"
                     name="telefono"
-                    placeholder="TELEFONO* (ej: +593987654321)"
+                    placeholder="TELEFONO*"
                     value={formData.telefono}
                     onChange={handleInputChange}
                     disabled={isSubmitting}
