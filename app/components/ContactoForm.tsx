@@ -6,6 +6,7 @@ import { gsap, ScrollTrigger } from "@/lib/gsapInit";
 import Link from "next/link";
 import ArrowAni from "./ArrowAni";
 import SlideTextOnHover from "./SlideTextOnHover";
+import emailjs from '@emailjs/browser';
 
 const ContactoForm: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -21,6 +22,9 @@ const ContactoForm: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [submitMessage, setSubmitMessage] = useState('');
+
+  // Estado para validación de teléfono
+  const [phoneError, setPhoneError] = useState('');
 
   const titleContainerRef = useRef<HTMLDivElement>(null);
   const formContainerRef = useRef<HTMLDivElement>(null);
@@ -41,6 +45,30 @@ const ContactoForm: React.FC = () => {
     "Multimedia",
     "Social Media Ads"
   ];
+
+  // Función para validar número de teléfono
+  const isValidPhone = (phone: string): boolean => {
+    // Remover espacios, guiones y paréntesis para validación
+    const cleanPhone = phone.replace(/[\s\-\(\)]/g, '');
+    
+    // Verificar que solo contenga números y posiblemente un + al inicio
+    const phoneRegex = /^(\+)?[0-9]{7,15}$/;
+    
+    return phoneRegex.test(cleanPhone);
+  };
+
+  // Función para formatear el número de teléfono mientras se escribe
+  const formatPhoneNumber = (value: string): string => {
+    // Remover todo excepto números y el signo +
+    const cleaned = value.replace(/[^\d+]/g, '');
+    
+    // Si empieza con +, mantenerlo
+    if (cleaned.startsWith('+')) {
+      return '+' + cleaned.substring(1).replace(/[^\d]/g, '');
+    }
+    
+    return cleaned;
+  };
 
   // Set up animations using useGSAP - Solo mantener animaciones de formulario si las necesitas
   useGSAP(() => {
@@ -109,10 +137,32 @@ const ContactoForm: React.FC = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value
-    });
+    
+    // Manejo especial para el campo de teléfono
+    if (name === 'telefono') {
+      const formattedValue = formatPhoneNumber(value);
+      
+      setFormData({
+        ...formData,
+        [name]: formattedValue
+      });
+
+      // Validar teléfono en tiempo real
+      if (formattedValue.length > 0) {
+        if (!isValidPhone(formattedValue)) {
+          setPhoneError('Ingresa un número de teléfono válido (7-15 dígitos)');
+        } else {
+          setPhoneError('');
+        }
+      } else {
+        setPhoneError('');
+      }
+    } else {
+      setFormData({
+        ...formData,
+        [name]: value
+      });
+    }
   };
 
   const handleInterestToggle = (interest: string) => {
@@ -133,7 +183,7 @@ const ContactoForm: React.FC = () => {
     setSubmitStatus('idle');
 
     try {
-      console.log('🚀 Enviando formulario con Web3Forms...');
+      console.log('🚀 Enviando formulario con EmailJS...');
 
       // Validar campos requeridos
       if (!formData.nombre.trim()) {
@@ -152,124 +202,82 @@ const ContactoForm: React.FC = () => {
         throw new Error('Por favor, ingresa un email válido');
       }
 
+      // Validar formato de teléfono
+      if (!isValidPhone(formData.telefono)) {
+        throw new Error('Por favor, ingresa un número de teléfono válido');
+      }
+
       console.log('✅ Validaciones pasadas');
 
-      // ========== PASO 1: ENVIAR FORMULARIO PRINCIPAL (a ti) ==========
-      const mainFormData = new FormData();
-
-      // Tu access key principal
-      mainFormData.append('access_key', 'fb4f1bec-402f-4c42-b379-33dd7fe9e5c0');
-
-      // Campos del formulario
-      mainFormData.append('name', formData.nombre.trim());
-      mainFormData.append('email', formData.email.trim().toLowerCase());
-      mainFormData.append('phone', formData.telefono.trim());
-      mainFormData.append('company', formData.empresa.trim() || 'No especificada');
-      mainFormData.append('message', formData.mensaje.trim() || 'Sin mensaje adicional');
-      mainFormData.append('interests', formData.intereses.length > 0 ? formData.intereses.join(', ') : 'No especificados');
-
-      // Configuración del email principal
-      mainFormData.append('subject', 'Nuevo contacto desde Antagonik Studio');
-      mainFormData.append('from_name', 'Antagonik Studio - Formulario de Contacto');
-
-      // NO incluir autoresponse aquí
-      mainFormData.append('autoresponse', 'false');
-
+      // ========== PASO 1: ENVIAR FORMULARIO PRINCIPAL (a ti como administrador) ==========
       console.log('📤 Enviando formulario principal...');
 
-      // Enviar formulario principal
-      const mainResponse = await fetch('https://api.web3forms.com/submit', {
-        method: 'POST',
-        body: mainFormData
-      });
+      // Preparar los intereses como array y como string
+      const interesesArray = formData.intereses.length > 0 ? formData.intereses : [];
+      const interesesString = interesesArray.length > 0 ? interesesArray.join(', ') : 'No especificados';
 
-      const mainResult = await mainResponse.json();
+      // CORREGIDO: Preparar datos que coincidan EXACTAMENTE con tu template HTML
+      const adminTemplateParams = {
+        from_name: formData.nombre.trim(),
+        from_email: formData.email.trim().toLowerCase(),
+        phone: formData.telefono.trim(),
+        company: formData.empresa.trim() || 'No especificada',
+        message: formData.mensaje.trim() || 'Sin mensaje adicional',
+        interests: interesesString, // Como string para mostrar en el template
+        interests_array: interesesArray, // Como array para los tags (si tu template lo soporta)
+        // Agregar timestamp si tu template lo necesita
+        timestamp: new Date().toLocaleString('es-ES', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          timeZone: 'America/Guayaquil'
+        })
+      };
 
-      if (!mainResponse.ok || !mainResult.success) {
-        throw new Error(mainResult.message || `Error ${mainResponse.status} en envío principal`);
-      }
+      console.log('📋 Datos a enviar al administrador:', adminTemplateParams);
+
+      await emailjs.send(
+        process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID!,
+        process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID_RECEIVE!, // Template del administrador
+        adminTemplateParams,
+        process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY!
+      );
 
       console.log('✅ Formulario principal enviado correctamente');
 
       // ========== PASO 2: ENVIAR EMAIL DE CONFIRMACIÓN (al usuario) ==========
-
-      // Preparar mensaje de confirmación
-      const confirmationMessage = `
-Hola ${formData.nombre},
-
-¡Gracias por contactarnos! Hemos recibido tu mensaje correctamente.
-
-RESUMEN DE TU SOLICITUD:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Nombre: ${formData.nombre}
-Email: ${formData.email}
-Teléfono: ${formData.telefono}
-Empresa: ${formData.empresa || 'No especificada'}
-Intereses: ${formData.intereses.length > 0 ? formData.intereses.join(', ') : 'No especificados'}
-
-Mensaje:
-${formData.mensaje || 'Sin mensaje adicional'}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Nuestro equipo revisará tu solicitud y se pondrá en contacto contigo en un plazo de 24-48 horas.
-
-Si tienes alguna pregunta urgente, no dudes en contactarnos directamente:
-📧 antagonik.studio@gmail.com
-📱 [593] 98 419 6542
-
-¡Gracias por tu interés en Antagonik Studio!
-
-Saludos,
-El equipo de Antagonik Studio
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-ANTAGONIK STUDIO
-24 DE LA THAN STREET, DONG DA
-
-🌐 Instagram: @antagonik.studio
-💼 LinkedIn: Antagonik Studio
-🎨 Behance: Antagonik Studio
-
-© 2025 Antagonik Studio. Todos los derechos reservados.
-    `.trim();
-
-      const confirmationFormData = new FormData();
-
-      // Access key separado para confirmaciones (crea uno nuevo en Web3Forms)
-      // REEMPLAZA con tu segundo access key cuando lo tengas
-      confirmationFormData.append('access_key', 'TU_SEGUNDO_ACCESS_KEY_AQUI');
-
-      // Email de destino (el usuario)
-      confirmationFormData.append('email', formData.email.trim().toLowerCase());
-      confirmationFormData.append('name', formData.nombre.trim());
-
-      // Configuración del email de confirmación
-      confirmationFormData.append('subject', 'Confirmación de contacto - Antagonik Studio');
-      confirmationFormData.append('message', confirmationMessage);
-      confirmationFormData.append('from_name', 'Antagonik Studio');
-
-      // Cambiar el destinatario - IMPORTANTE: el email va al usuario
-      confirmationFormData.append('to', formData.email.trim().toLowerCase());
-
       console.log('📧 Enviando email de confirmación...');
 
-      // Enviar email de confirmación
-      const confirmationResponse = await fetch('https://api.web3forms.com/submit', {
-        method: 'POST',
-        body: confirmationFormData
-      });
+      // Preparar parámetros para el email de confirmación al usuario
+      const confirmationParams = {
+        to_name: formData.nombre.trim(),
+        to_email: formData.email.trim().toLowerCase(),
+        from_name: 'Antagonik Studio',
+        client_name: formData.nombre.trim(),
+        client_email: formData.email.trim(),
+        client_phone: formData.telefono.trim(),
+        client_company: formData.empresa.trim() || 'No especificada',
+        client_message: formData.mensaje.trim() || 'Sin mensaje adicional',
+        client_interests: interesesString,
+        company_email: 'antagonik.studio@gmail.com',
+        company_phone: '[593] 98 419 6542',
+        company_address: '24 DE LA THAN STREET, DONG DA',
+      };
 
-      const confirmationResult = await confirmationResponse.json();
-
-      if (!confirmationResponse.ok || !confirmationResult.success) {
-        // Si falla la confirmación, solo logueamos el error pero no fallamos todo el proceso
-        console.warn('⚠️ Error enviando confirmación:', confirmationResult.message);
-        console.log('✅ Formulario principal enviado, pero falló confirmación al usuario');
-      } else {
+      try {
+        await emailjs.send(
+          process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID!,
+          process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID_SEND!, // Template de confirmación al usuario
+          confirmationParams,
+          process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY!
+        );
         console.log('✅ Email de confirmación enviado correctamente');
+      } catch (confirmationError) {
+        // Si falla la confirmación, solo logueamos el error pero no fallamos todo el proceso
+        console.warn('⚠️ Error enviando confirmación:', confirmationError);
+        console.log('✅ Formulario principal enviado, pero falló confirmación al usuario');
       }
 
       // ÉXITO - Limpiar formulario
@@ -282,6 +290,9 @@ ANTAGONIK STUDIO
         intereses: []
       });
 
+      // Limpiar errores
+      setPhoneError('');
+
       setSubmitStatus('success');
       setSubmitMessage('¡Mensaje enviado con éxito! Te contactaremos pronto. También recibirás un email de confirmación por separado.');
 
@@ -292,7 +303,9 @@ ANTAGONIK STUDIO
 
       let errorMessage = 'Hubo un error al enviar el mensaje. Por favor, intenta nuevamente.';
 
-      if (error?.message) {
+      if (error?.text) {
+        errorMessage = `Error: ${error.text}`;
+      } else if (error?.message) {
         errorMessage = error.message;
       }
 
@@ -417,13 +430,18 @@ ANTAGONIK STUDIO
                     type="tel"
                     id="telefono"
                     name="telefono"
-                    placeholder="TELEFONO*"
+                    placeholder="TELEFONO* (ej: +593987654321)"
                     value={formData.telefono}
                     onChange={handleInputChange}
                     disabled={isSubmitting}
                     required
-                    className="w-full bg-transparent border-b border-gray-700 py-2 text-gray-400 focus:outline-none focus:border-gray-400 placeholder-gray-700 text-sm font-archivo transition-colors duration-300 disabled:opacity-50"
+                    className={`w-full bg-transparent border-b py-2 text-gray-400 focus:outline-none placeholder-gray-700 text-sm font-archivo transition-colors duration-300 disabled:opacity-50 ${
+                      phoneError ? 'border-red-500 focus:border-red-400' : 'border-gray-700 focus:border-gray-400'
+                    }`}
                   />
+                  {phoneError && (
+                    <p className="text-red-400 text-xs mt-1 font-archivo">{phoneError}</p>
+                  )}
                 </div>
 
                 <div>
@@ -456,7 +474,7 @@ ANTAGONIK STUDIO
               <div className="flex flex-wrap gap-6 justify-start items-center pt-1">
                 <button
                   type="submit"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || phoneError !== ''}
                   className="bg-white text-black px-8 py-2 rounded-full hover:bg-gray-200 transition-colors font-archivo disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   {isSubmitting ? (
@@ -519,13 +537,13 @@ ANTAGONIK STUDIO
 
             <div>
               <p className="text-sm uppercase text-gray-600 mb-1">CONTACTOS</p>
-              <div className="group cursor-pointer">
+              <div className="group cursor-pointer w-fit">
                 <SlideTextOnHover
                   originalText={<p className="text-sm">ANTAGONIK.STUDIO@GMAIL.COM</p>}
                   hoverText={<p className="text-sm text-white">ESCRÍBENOS</p>}
                 />
               </div>
-              <div className="group cursor-pointer">
+              <div className="group cursor-pointer w-fit">
                 <SlideTextOnHover
                   originalText={<p className="text-sm">[593] 98 419 6542</p>}
                   hoverText={<p className="text-sm text-white">LLÁMANOS</p>}
@@ -539,19 +557,19 @@ ANTAGONIK STUDIO
 
             <div>
               <p className="text-sm uppercase text-gray-600 mb-1">SIGUENOS</p>
-              <div className="group cursor-pointer">
+              <div className="group cursor-pointer w-fit">
                 <SlideTextOnHover
                   originalText={<p className="text-sm">/ INSTAGRAM</p>}
                   hoverText={<p className="text-sm text-white">/ INSTAGRAM</p>}
                 />
               </div>
-              <div className="group cursor-pointer">
+              <div className="group cursor-pointer w-fit">
                 <SlideTextOnHover
                   originalText={<p className="text-sm">/ BEHANCE</p>}
                   hoverText={<p className="text-sm text-white">/ BEHANCE</p>}
                 />
               </div>
-              <div className="group cursor-pointer">
+              <div className="group cursor-pointer w-fit">
                 <SlideTextOnHover
                   originalText={<p className="text-sm">/ LINKEDIN</p>}
                   hoverText={<p className="text-sm text-white">/ LINKEDIN</p>}
