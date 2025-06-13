@@ -275,9 +275,9 @@ const Encabezado: React.FC<EncabezadoProps> = ({
             <span className="word inline-block transform translate-y-full opacity-0">/ {numero}</span>
           </span>
         </div>
-        {/* Title and section - adjusted for responsive layouts */}
-        <div className="col-span-12 md:col-span-11 lg:col-span-9 2xl:col-span-8 flex flex-col relative">
-          <div className="text-[1.65rem] md:text-3xl lg:text-4xl  2xl:text-5xl font-display font-semibold text-gray-400 uppercase leading-[1.1] max-w-[360px] md:max-w-[900px] lg:max-w-[750px] 2xl:max-w-[975px] relative">
+        {/* Title and section - adjusted for responsive layouts including 2xl */}
+        <div className="col-span-12 md:col-span-11 lg:col-span-9 2xl:col-span-7 2xl:col-start-4 flex flex-col relative">
+          <div className="text-[1.65rem] md:text-3xl lg:text-4xl  2xl:text-5xl font-display font-semibold text-gray-400 uppercase leading-[1.1] max-w-[360px] md:max-w-[900px] lg:max-w-[750px] 2xl:max-w-[1000px] relative">
             {/* Section only visible on medium screens and up */}
             <span ref={seccionRef} className="hidden md:block absolute left-0 top-[2.5px] md:top-[4.5px] font-display font-normal text-xs md:text-sm text-gray-700">
               <span className="word-container inline-block overflow-hidden">
@@ -285,7 +285,7 @@ const Encabezado: React.FC<EncabezadoProps> = ({
               </span>
             </span>
             <span 
-              className="md:pl-[6ch] lg:pl-[4.6ch]" 
+              className="md:pl-[6ch] lg:pl-[4.6ch] 2xl:pl-[4.3ch]" 
               ref={tituloRef} 
               style={{ 
                 wordSpacing: espaciadoPalabras,
@@ -298,7 +298,7 @@ const Encabezado: React.FC<EncabezadoProps> = ({
           </div>
         </div>
         {/* Copyright - only visible on large screens and up */}
-        <div ref={copyrightRef} className="hidden lg:block lg:col-span-1 text-right mt-1 font-archivo font-normal text-sm text-gray-700">
+        <div ref={copyrightRef} className="hidden lg:block lg:col-span-1 2xl:col-span-2 2xl:col-start-11 text-right mt-1 font-archivo font-normal text-sm text-gray-700">
           <span className="word-container inline-block overflow-hidden">
             <span className="word inline-block transform translate-y-full opacity-0">&copy;2025</span>
           </span>
