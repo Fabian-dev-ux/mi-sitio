@@ -1,20 +1,21 @@
-/** @type {import('next').NextConfig} */
+import type { NextConfig } from 'next'
+
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
   enabled: process.env.ANALYZE === 'true',
 })
 
-const nextConfig = {
-  output: 'export', // Necesario para generar sitio estático
-  trailingSlash: true, // Mejora compatibilidad con hosting estático
+const nextConfig: NextConfig = {
+  output: 'export',
+  trailingSlash: true,
   images: {
-    unoptimized: true // Necesario para export estático
+    unoptimized: true
   },
-  serverExternalPackages: ["sharp"], // Mantén esto si procesas imágenes
+  serverExternalPackages: ["sharp"],
   experimental: {
     turbo: {
-      // Opciones específicas de Turbopack (si las necesitas)
+      // Opciones específicas de Turbopack
     }
   }
-};
+}
 
-module.exports = withBundleAnalyzer(nextConfig);
+export default withBundleAnalyzer(nextConfig)
