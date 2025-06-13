@@ -539,7 +539,7 @@ const Servicios: React.FC = () => {
       <Encabezado
         numero="02"
         seccion="Servicios"
-        titulo="Creamos experiencias únicas integrando diseño visual, desarrollo web y estrategia de contenido con pasión y propósito"
+        titulo="Diseño, desarrollo y contenido que realmente conecta con tu audiencia"
       />
 
       <div className="relative grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-8 mt-12 md:mt-16 lg:mt-24 2xl:mt-32">
