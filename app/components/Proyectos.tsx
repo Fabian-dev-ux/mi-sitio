@@ -12,11 +12,13 @@ interface ProjectData {
   title: string;
   tags: string[];
   year: string;
+  url?: string; // Nueva propiedad para la URL
 }
 
 interface ParallaxImageProps {
   src: string;
   alt: string;
+  onClick?: () => void; // Nueva propiedad para manejar el click
 }
 
 interface ProjectCardProps {
@@ -36,19 +38,22 @@ const Proyectos: React.FC = () => {
       images: ["/images/proyectos/proyecto1.webp"],
       title: "Sisawiru",
       tags: ["Branding", "Packaging"],
-      year: "/2024"
+      year: "/2024",
+      url: "https://www.behance.net/gallery/132235883/SISAWIRU-VISUAL-IDENTITY"
     },
     {
       images: ["/images/proyectos/proyecto2.webp"],
       title: "593 SECURITY",
       tags: ["UX", "UI", "Webflow"],
-      year: "/2025"
+      year: "/2025",
+      url: "https://593security.com"
     },
     {
       images: ["/images/proyectos/proyecto3.webp"],
       title: "LOGOFOLIO",
       tags: ["Identidad visual", "Logo design"],
-      year: "/2023"
+      year: "/2023",
+      url: "https://www.behance.net/gallery/123418427/LOGOS-2021"
     },
     {
       images: ["/images/proyectos/proyecto4.webp"],
@@ -72,6 +77,13 @@ const Proyectos: React.FC = () => {
 
   // Hook para detectar cambios de ruta en Next.js
   const pathname = usePathname();
+
+  // Función para manejar el click en los proyectos
+  const handleProjectClick = (url?: string): void => {
+    if (url) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+  };
 
   // Función para limpiar animaciones existentes
   const cleanupAnimations = (): void => {
@@ -294,7 +306,7 @@ const Proyectos: React.FC = () => {
     };
   }, [isReady]);
 
-  const ParallaxImage: React.FC<ParallaxImageProps> = ({ src, alt }) => {
+  const ParallaxImage: React.FC<ParallaxImageProps> = ({ src, alt, onClick }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const buttonRef = useRef<HTMLDivElement>(null);
     const [showButton, setShowButton] = useState<boolean>(false);
@@ -518,6 +530,13 @@ const Proyectos: React.FC = () => {
       }
     };
 
+    // Manejar click en el contenedor
+    const handleClick = (): void => {
+      if (onClick) {
+        onClick();
+      }
+    };
+
     // Cleanup
     useEffect(() => {
       return () => {
@@ -548,6 +567,7 @@ const Proyectos: React.FC = () => {
           onMouseMove={handleMouseMove}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
+          onClick={handleClick}
         >
           <div className="absolute inset-0 overflow-hidden">
             <div
@@ -596,48 +616,62 @@ const Proyectos: React.FC = () => {
     );
   };
 
-  const ProjectCard: React.FC<ProjectCardProps> = ({ project, index }) => (
-    <div className="project-card flex flex-col h-full shadow-lg cursor-pointer" style={{ position: 'relative', overflow: 'visible' }}>
-      <ParallaxImage src={project.images[0]} alt={`${project.title} Image`} />
-      <div className="pt-5 pb-1 flex-grow flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <div className="overflow-hidden">
-            <h2 className="project-title text-[1.05rem] md-[1.125rem] font-archivo font-medium uppercase text-gray-400">
-              {project.title}
-            </h2>
+  const ProjectCard: React.FC<ProjectCardProps> = ({ project, index }) => {
+    const handleCardClick = (): void => {
+      handleProjectClick(project.url);
+    };
+
+    return (
+      <div 
+        className={`project-card flex flex-col h-full shadow-lg ${project.url ? 'cursor-pointer' : 'cursor-default'}`} 
+        style={{ position: 'relative', overflow: 'visible' }}
+        onClick={handleCardClick}
+      >
+        <ParallaxImage 
+          src={project.images[0]} 
+          alt={`${project.title} Image`}
+          onClick={() => handleProjectClick(project.url)}
+        />
+        <div className="pt-5 pb-1 flex-grow flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <div className="overflow-hidden">
+              <h2 className="project-title text-[1.05rem] md-[1.125rem] font-archivo font-medium uppercase text-gray-400">
+                {project.title}
+              </h2>
+            </div>
+
+            <div className="overflow-hidden">
+              <div className="project-tags flex items-center space-x-1">
+                {project.tags.map((tag, tagIndex) => (
+                  <span key={tagIndex} className="text-sm font-archivo text-gray-700">
+                    {tagIndex > 0 && "·"} {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
           </div>
 
           <div className="overflow-hidden">
-            <div className="project-tags flex items-center space-x-1">
-              {project.tags.map((tag, tagIndex) => (
-                <span key={tagIndex} className="text-sm font-archivo text-gray-700">
-                  {tagIndex > 0 && "·"} {tag}
-                </span>
-              ))}
+            <div className="project-year text-sm font-archivo text-gray-700">
+              {project.year}
             </div>
           </div>
         </div>
-
-        <div className="overflow-hidden">
-          <div className="project-year text-sm font-archivo text-gray-700">
-            {project.year}
-          </div>
-        </div>
+        {/* Línea consistente con altura fija en píxeles y sin border-radius */}
+        <div
+          className="project-line w-full bg-gray-800 mt-2"
+          style={{ 
+            height: '0.25px',
+            transformOrigin: "left center", 
+            transform: "scaleX(0)",
+            borderRadius: '0',
+            minHeight: '0.25px',
+            maxHeight: '0.25px'
+          }}
+        ></div>
       </div>
-      {/* Línea consistente con altura fija en píxeles y sin border-radius */}
-      <div
-        className="project-line w-full bg-gray-800 mt-2"
-        style={{ 
-          height: '0.25px',
-          transformOrigin: "left center", 
-          transform: "scaleX(0)",
-          borderRadius: '0',
-          minHeight: '0.25px',
-          maxHeight: '0.25px'
-        }}
-      ></div>
-    </div>
-  );
+    );
+  };
 
   return (
     <section ref={projectsContainerRef} className="bg-dark text-white w-full py-2 px-4 md:px-6 lg:px-8 xl:px-10 2xl:px-20 pt-10 md:pt-16 lg:pt-20  2xl:pt-32" id="proyectos">
