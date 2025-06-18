@@ -12,6 +12,7 @@ interface ProjectData {
   title: string;
   tags: string[];
   year: string;
+  url?: string; // Agregamos URL opcional para cada proyecto
 }
 
 interface ParallaxImageProps {
@@ -36,25 +37,29 @@ const Proyectos: React.FC = () => {
       images: ["/images/proyectos/proyecto1.webp"],
       title: "Sisawiru",
       tags: ["Branding", "Packaging"],
-      year: "/2024"
+      year: "/2024",
+      url: "https://www.behance.net/gallery/132235883/SISAWIRU-VISUAL-IDENTITY"
     },
     {
       images: ["/images/proyectos/proyecto2.webp"],
       title: "593 SECURITY",
       tags: ["UX", "UI", "Webflow"],
-      year: "/2025"
+      year: "/2025",
+      url: "https://593security.com"
     },
     {
       images: ["/images/proyectos/proyecto3.webp"],
       title: "LOGOFOLIO",
       tags: ["Identidad visual", "Logo design"],
-      year: "/2023"
+      year: "/2023",
+      url: "https://www.behance.net/gallery/123418427/LOGOS-2021"
     },
     {
       images: ["/images/proyectos/proyecto4.webp"],
       title: "YOKUN",
       tags: ["Branding", "Identidad visual"],
       year: "/2025"
+      // No URL para YOKUN ya que está "PRÓXIMAMENTE"
     }
   ];
 
@@ -72,6 +77,13 @@ const Proyectos: React.FC = () => {
 
   // Hook para detectar cambios de ruta en Next.js
   const pathname = usePathname();
+
+  // Función para manejar el click en un proyecto
+  const handleProjectClick = (project: ProjectData): void => {
+    if (project.url) {
+      window.open(project.url, '_blank', 'noopener,noreferrer');
+    }
+  };
 
   // Función para limpiar animaciones existentes
   const cleanupAnimations = (): void => {
@@ -108,21 +120,25 @@ const Proyectos: React.FC = () => {
         cardElement.removeEventListener('mouseleave', cardElement._mouseLeaveHandler);
       }
 
-      // Crear nuevos handlers
+      // Crear nuevos handlers para hover de las tarjetas de proyecto
       const handleMouseEnter = (): void => {
-        gsap.to(image, {
-          scale: 1.1,
-          duration: 0.8,
-          ease: "power2.out"
-        });
+        if (image) {
+          gsap.to(image, {
+            scale: 1.05,
+            duration: 0.8,
+            ease: "power2.out"
+          });
+        }
       };
 
       const handleMouseLeave = (): void => {
-        gsap.to(image, {
-          scale: 1,
-          duration: 0.8,
-          ease: "power2.out"
-        });
+        if (image) {
+          gsap.to(image, {
+            scale: 1,
+            duration: 0.8,
+            ease: "power2.out"
+          });
+        }
       };
 
       // Guardar referencias a los handlers
@@ -294,7 +310,13 @@ const Proyectos: React.FC = () => {
     };
   }, [isReady]);
 
-  const ParallaxImage: React.FC<ParallaxImageProps> = ({ src, alt }) => {
+  // Componente ParallaxImage con funcionalidad de botón de seguimiento
+  const ParallaxImage: React.FC<ParallaxImageProps & { projectTitle?: string; onImageClick?: () => void }> = ({ 
+    src, 
+    alt, 
+    projectTitle, 
+    onImageClick 
+  }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const buttonRef = useRef<HTMLDivElement>(null);
     const [showButton, setShowButton] = useState<boolean>(false);
@@ -303,42 +325,15 @@ const Proyectos: React.FC = () => {
     const mousePosition = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
     const buttonPosition = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
     const animationFrameRef = useRef<number | null>(null);
-
-    // Referencias para controlar las animaciones GSAP
     const currentAnimationRef = useRef<gsap.core.Tween | null>(null);
 
-    // Referencia para almacenar la última posición del cursor en viewport
+    // Referencias para el seguimiento global del cursor
     const lastViewportPosition = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
-
-    // Nueva referencia para trackear si el cursor está dentro del elemento
     const isMouseInside = useRef<boolean>(false);
-
-    // Nueva referencia para detectar si estamos en scroll
     const isScrolling = useRef<boolean>(false);
-
-    // Referencia para el timeout de scroll
     const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    // Función mejorada para calcular la posición relativa
-    const updateRelativePosition = (viewportX: number, viewportY: number): boolean => {
-      if (!containerRef.current) return false;
-
-      const rect = containerRef.current.getBoundingClientRect();
-      const newX = viewportX - rect.left;
-      const newY = viewportY - rect.top;
-
-      // Verificar si está dentro del elemento
-      const isInside = newX >= 0 && newX <= rect.width && newY >= 0 && newY <= rect.height;
-
-      if (isInside) {
-        mousePosition.current = { x: newX, y: newY };
-        return true;
-      }
-
-      return false;
-    };
-
-    // Función optimizada para animar el botón hacia la posición del cursor
+    // Función para animar la posición del botón
     const animateButtonPosition = (): void => {
       if (!buttonRef.current || !showButton || !isMouseInside.current) {
         animationFrameRef.current = null;
@@ -346,11 +341,18 @@ const Proyectos: React.FC = () => {
       }
 
       const lerp = (start: number, end: number, factor: number): number => start + (end - start) * factor;
-      // Velocidad más rápida durante el scroll para mejor respuesta
-      const ease = isScrolling.current ? 0.6 : 0.2;
-
-      buttonPosition.current.x = lerp(buttonPosition.current.x, mousePosition.current.x, ease);
-      buttonPosition.current.y = lerp(buttonPosition.current.y, mousePosition.current.y, ease);
+      
+      // Durante el scroll, usar actualización más directa para evitar lag
+      if (isScrolling.current) {
+        // Durante scroll, actualizar posición más directamente
+        buttonPosition.current.x = mousePosition.current.x;
+        buttonPosition.current.y = mousePosition.current.y;
+      } else {
+        // Fuera del scroll, usar animación suave normal
+        const ease = 0.2;
+        buttonPosition.current.x = lerp(buttonPosition.current.x, mousePosition.current.x, ease);
+        buttonPosition.current.y = lerp(buttonPosition.current.y, mousePosition.current.y, ease);
+      }
 
       gsap.set(buttonRef.current, {
         x: buttonPosition.current.x,
@@ -362,30 +364,15 @@ const Proyectos: React.FC = () => {
       const deltaX = Math.abs(mousePosition.current.x - buttonPosition.current.x);
       const deltaY = Math.abs(mousePosition.current.y - buttonPosition.current.y);
 
-      // Continuar animando mientras haya diferencia significativa
-      if ((deltaX > 0.3 || deltaY > 0.3) && showButton && isMouseInside.current) {
+      // Continuar animando mientras haya diferencia significativa o durante scroll
+      if ((deltaX > 0.3 || deltaY > 0.3 || isScrolling.current) && showButton && isMouseInside.current) {
         animationFrameRef.current = requestAnimationFrame(animateButtonPosition);
       } else {
         animationFrameRef.current = null;
       }
     };
 
-    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>): void => {
-      // Actualizar siempre la última posición del viewport
-      lastViewportPosition.current = {
-        x: e.clientX,
-        y: e.clientY
-      };
-
-      // Actualizar posición relativa
-      const isInside = updateRelativePosition(e.clientX, e.clientY);
-
-      if (isInside && showButton && !animationFrameRef.current) {
-        animationFrameRef.current = requestAnimationFrame(animateButtonPosition);
-      }
-    };
-
-    // Función mejorada para manejar el scroll
+    // Función para manejar el scroll
     const handleScroll = (): void => {
       if (!showButton || !isMouseInside.current || !containerRef.current) {
         return;
@@ -399,19 +386,43 @@ const Proyectos: React.FC = () => {
         clearTimeout(scrollTimeoutRef.current);
       }
 
-      // Actualizar posición basada en la última posición conocida del cursor
-      const isStillInside = updateRelativePosition(
-        lastViewportPosition.current.x,
-        lastViewportPosition.current.y
-      );
+      // Recalcular la posición relativa del cursor respecto al elemento
+      const rect = containerRef.current.getBoundingClientRect();
+      const cursorX = lastViewportPosition.current.x;
+      const cursorY = lastViewportPosition.current.y;
+      
+      // Calcular nueva posición relativa
+      const newRelativeX = cursorX - rect.left;
+      const newRelativeY = cursorY - rect.top;
+      
+      // Verificar si el cursor sigue dentro del elemento después del scroll
+      const isStillInside = newRelativeX >= 0 && newRelativeX <= rect.width && 
+                           newRelativeY >= 0 && newRelativeY <= rect.height;
 
       if (isStillInside) {
-        // Forzar actualización inmediata del botón durante scroll
+        // Actualizar la posición del cursor relativa al elemento
+        mousePosition.current = { x: newRelativeX, y: newRelativeY };
+        
+        // Forzar actualización inmediata de la posición del botón
+        if (buttonRef.current) {
+          // Actualizar directamente la posición objetivo del botón
+          gsap.set(buttonRef.current, {
+            x: newRelativeX,
+            y: newRelativeY,
+            xPercent: -50,
+            yPercent: -50
+          });
+          
+          // Actualizar también la posición de seguimiento
+          buttonPosition.current = { x: newRelativeX, y: newRelativeY };
+        }
+        
+        // Iniciar/continuar la animación suave si no está corriendo
         if (!animationFrameRef.current) {
           animationFrameRef.current = requestAnimationFrame(animateButtonPosition);
         }
       } else {
-        // Si ya no está dentro, simular mouse leave
+        // Si el cursor ya no está dentro después del scroll, ocultar el botón
         isMouseInside.current = false;
         handleMouseLeave();
         return;
@@ -423,40 +434,76 @@ const Proyectos: React.FC = () => {
       }, 150);
     };
 
+    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>): void => {
+      if (!containerRef.current || !showButton) return;
+
+      // Actualizar posición global del cursor
+      lastViewportPosition.current = { x: e.clientX, y: e.clientY };
+
+      const rect = containerRef.current.getBoundingClientRect();
+      const relativeX = e.clientX - rect.left;
+      const relativeY = e.clientY - rect.top;
+
+      mousePosition.current = { x: relativeX, y: relativeY };
+
+      if (!animationFrameRef.current) {
+        animationFrameRef.current = requestAnimationFrame(animateButtonPosition);
+      }
+    };
+
     const handleMouseEnter = (e: React.MouseEvent<HTMLDivElement>): void => {
       if (!containerRef.current) return;
 
-      // Marcar que el cursor está dentro
       isMouseInside.current = true;
+      
+      // Guardar posición inicial
+      lastViewportPosition.current = { x: e.clientX, y: e.clientY };
+      
+      const rect = containerRef.current.getBoundingClientRect();
+      const relativeX = e.clientX - rect.left;
+      const relativeY = e.clientY - rect.top;
+      
+      mousePosition.current = { x: relativeX, y: relativeY };
+      buttonPosition.current = { x: relativeX, y: relativeY };
 
-      // Cancelar cualquier animación pendiente
+      setShowButton(true);
+    };
+
+    const handleMouseLeave = (): void => {
+      isMouseInside.current = false;
+
       if (currentAnimationRef.current) {
         currentAnimationRef.current.kill();
       }
 
-      // Guardar posición inicial del cursor
-      lastViewportPosition.current = {
-        x: e.clientX,
-        y: e.clientY
-      };
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
 
-      // Calcular posición relativa inicial
-      updateRelativePosition(e.clientX, e.clientY);
-
-      // Inicializar posición del botón en la misma ubicación
-      buttonPosition.current = { ...mousePosition.current };
-
-      // Mostrar el botón
-      setShowButton(true);
-
-      // Agregar listener de scroll cuando el cursor entra
-      window.addEventListener('scroll', handleScroll, { passive: true });
+      if (buttonRef.current) {
+        currentAnimationRef.current = gsap.to(buttonRef.current, {
+          scale: 0,
+          opacity: 0,
+          duration: 0.3,
+          ease: "power2.in",
+          onComplete: () => {
+            setShowButton(false);
+          }
+        });
+      }
     };
 
-    // Efecto para manejar la animación cuando showButton cambia
+    // Manejar click en el contenedor
+    const handleContainerClick = (): void => {
+      if (onImageClick) {
+        onImageClick();
+      }
+    };
+
+    // Efecto para animar la entrada del botón
     useEffect(() => {
       if (showButton && buttonRef.current) {
-        // Configurar posición inicial y animar entrada
         gsap.set(buttonRef.current, {
           x: buttonPosition.current.x,
           y: buttonPosition.current.y,
@@ -472,8 +519,8 @@ const Proyectos: React.FC = () => {
           duration: 0.4,
           ease: "back.out(1.7)",
           onComplete: () => {
-            // Iniciar el seguimiento del cursor después de que aparezca el botón
-            if (isMouseInside.current && !animationFrameRef.current) {
+            // Iniciar seguimiento después de que aparezca
+            if (!animationFrameRef.current) {
               animationFrameRef.current = requestAnimationFrame(animateButtonPosition);
             }
           }
@@ -481,42 +528,13 @@ const Proyectos: React.FC = () => {
       }
     }, [showButton]);
 
-    const handleMouseLeave = (): void => {
-      // Marcar que el cursor ya no está dentro
-      isMouseInside.current = false;
-      isScrolling.current = false;
-
-      // Limpiar timeouts
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
-        scrollTimeoutRef.current = null;
-      }
-
-      if (currentAnimationRef.current) {
-        currentAnimationRef.current.kill();
-      }
-
-      // Detener inmediatamente el seguimiento del cursor
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-        animationFrameRef.current = null;
-      }
-
-      // Remover listener de scroll cuando el cursor sale
-      window.removeEventListener('scroll', handleScroll);
-
-      if (buttonRef.current) {
-        currentAnimationRef.current = gsap.to(buttonRef.current, {
-          scale: 0,
-          opacity: 0,
-          duration: 0.3,
-          ease: "power2.in",
-          onComplete: () => {
-            setShowButton(false);
-          }
-        });
-      }
-    };
+    // Listener para el scroll
+    useEffect(() => {
+      window.addEventListener('scroll', handleScroll, { passive: true });
+      return () => {
+        window.removeEventListener('scroll', handleScroll);
+      };
+    }, [showButton]);
 
     // Cleanup
     useEffect(() => {
@@ -530,24 +548,18 @@ const Proyectos: React.FC = () => {
         if (scrollTimeoutRef.current) {
           clearTimeout(scrollTimeoutRef.current);
         }
-        // Limpiar listener de scroll
-        window.removeEventListener('scroll', handleScroll);
-        // Resetear flags
-        isScrolling.current = false;
-        isMouseInside.current = false;
       };
     }, []);
 
     return (
-      <div
-        className="relative h-[250px] md:h-[300px] lg:h-[310px] xl:h-[350px] 2xl:h-[450px]"
-      >
+      <div className="relative h-[250px] md:h-[300px] lg:h-[310px] xl:h-[350px] 2xl:h-[450px]">
         <div
           ref={containerRef}
           className="parallax-container h-full w-full relative cursor-pointer"
-          onMouseMove={handleMouseMove}
           onMouseEnter={handleMouseEnter}
+          onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
+          onClick={handleContainerClick}
         >
           <div className="absolute inset-0 overflow-hidden">
             <div
@@ -574,10 +586,10 @@ const Proyectos: React.FC = () => {
             </div>
           </div>
 
-          {/* Botón circular - optimizado para mejor performance */}
+          {/* Botón píldora redondeado */}
           <div
             ref={buttonRef}
-            className="absolute w-24 h-24 md:w-28 md:h-28 bg-black bg-opacity-75 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-300 font-archivo font-medium text-sm md:text-base uppercase tracking-wider pointer-events-none"
+            className="absolute h-12 px-6 bg-black bg-opacity-75 backdrop-blur-sm flex items-center justify-center text-gray-300 font-archivo font-medium text-sm md:text-base uppercase tracking-wider pointer-events-none"
             style={{
               willChange: 'transform, opacity',
               backfaceVisibility: 'hidden',
@@ -586,10 +598,13 @@ const Proyectos: React.FC = () => {
               top: 0,
               opacity: 0,
               transform: 'scale(0) translate(-50%, -50%)',
-              display: showButton ? 'flex' : 'none'
+              display: showButton ? 'flex' : 'none',
+              borderRadius: '24px', // Hace el botón tipo píldora
+              minWidth: 'fit-content',
+              whiteSpace: 'nowrap'
             }}
           >
-            [VER]
+            {projectTitle === 'YOKUN' ? 'PRÓXIMAMENTE' : '[VER]'}
           </div>
         </div>
       </div>
@@ -597,8 +612,17 @@ const Proyectos: React.FC = () => {
   };
 
   const ProjectCard: React.FC<ProjectCardProps> = ({ project, index }) => (
-    <div className="project-card flex flex-col h-full shadow-lg cursor-pointer" style={{ position: 'relative', overflow: 'visible' }}>
-      <ParallaxImage src={project.images[0]} alt={`${project.title} Image`} />
+    <div 
+      className="project-card flex flex-col h-full shadow-lg cursor-pointer" 
+      style={{ position: 'relative', overflow: 'visible' }}
+      onClick={() => handleProjectClick(project)}
+    >
+      <ParallaxImage 
+        src={project.images[0]} 
+        alt={`${project.title} Image`} 
+        projectTitle={project.title}
+        onImageClick={() => handleProjectClick(project)}
+      />
       <div className="pt-5 pb-1 flex-grow flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <div className="overflow-hidden">
