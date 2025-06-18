@@ -9,6 +9,7 @@ import { gsap, ScrollTrigger } from "@/lib/gsapInit";
 // Interfaces para tipado
 interface ProjectData {
   images: string[];
+  mobileImages: string[]; // Nueva propiedad para imágenes móviles
   title: string;
   tags: string[];
   year: string;
@@ -17,6 +18,7 @@ interface ProjectData {
 
 interface ParallaxImageProps {
   src: string;
+  mobileSrc: string; // Nueva propiedad
   alt: string;
 }
 
@@ -35,6 +37,7 @@ const Proyectos: React.FC = () => {
   const projectsData: ProjectData[] = [
     {
       images: ["/images/proyectos/proyecto1.webp"],
+      mobileImages: ["/images/proyectos/proyecto1-mobile.webp"], // Nueva
       title: "Sisawiru",
       tags: ["Branding", "Packaging"],
       year: "/2024",
@@ -42,6 +45,7 @@ const Proyectos: React.FC = () => {
     },
     {
       images: ["/images/proyectos/proyecto2.webp"],
+      mobileImages: ["/images/proyectos/proyecto2-mobile.webp"], // Nueva
       title: "593 SECURITY",
       tags: ["UX", "UI", "Webflow"],
       year: "/2025",
@@ -49,6 +53,7 @@ const Proyectos: React.FC = () => {
     },
     {
       images: ["/images/proyectos/proyecto3.webp"],
+      mobileImages: ["/images/proyectos/proyecto3-mobile.webp"], // Nueva
       title: "LOGOFOLIO",
       tags: ["Identidad visual", "Logo design"],
       year: "/2023",
@@ -56,6 +61,7 @@ const Proyectos: React.FC = () => {
     },
     {
       images: ["/images/proyectos/proyecto4.webp"],
+      mobileImages: ["/images/proyectos/proyecto4-mobile.webp"], // Nueva
       title: "YOKUN",
       tags: ["Branding", "Identidad visual"],
       year: "/2025"
@@ -77,6 +83,16 @@ const Proyectos: React.FC = () => {
 
   // Hook para detectar cambios de ruta en Next.js
   const pathname = usePathname();
+
+  // Función helper para generar srcSet
+  const generateSrcSet = (desktopSrc: string, mobileSrc: string): string => {
+    return `${mobileSrc} 481w, ${desktopSrc} 1200w`;
+  };
+
+  // Función helper para generar sizes
+  const generateSizes = (): string => {
+    return "(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw";
+  };
 
   // Función para manejar el click en un proyecto
   const handleProjectClick = (project: ProjectData): void => {
@@ -311,11 +327,13 @@ const Proyectos: React.FC = () => {
   }, [isReady]);
 
   // Componente ParallaxImage con funcionalidad de botón de seguimiento
-  const ParallaxImage: React.FC<ParallaxImageProps & { projectTitle?: string; onImageClick?: () => void }> = ({ 
+  const ParallaxImage: React.FC<ParallaxImageProps & { projectTitle?: string; onImageClick?: () => void; index?: number }> = ({ 
     src, 
+    mobileSrc, // Nueva prop
     alt, 
     projectTitle, 
-    onImageClick 
+    onImageClick,
+    index = 0
   }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const buttonRef = useRef<HTMLDivElement>(null);
@@ -573,10 +591,13 @@ const Proyectos: React.FC = () => {
               }}
             >
               <Image
-                src={src}
+                src={src} // Imagen por defecto (desktop)
                 alt={alt}
                 fill
-                sizes="(max-width: 768px) 100vw, 50vw"
+                // Implementación responsive
+                srcSet={generateSrcSet(src, mobileSrc)}
+                sizes={generateSizes()}
+                priority={index === 0} // Solo la primera imagen tiene prioridad
                 className="object-cover project-image transition-transform duration-100"
                 style={{
                   transition: "transform 0.1s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
@@ -619,9 +640,11 @@ const Proyectos: React.FC = () => {
     >
       <ParallaxImage 
         src={project.images[0]} 
+        mobileSrc={project.mobileImages[0]} // Nueva prop
         alt={`${project.title} Image`} 
         projectTitle={project.title}
         onImageClick={() => handleProjectClick(project)}
+        index={index} // Pasar el índice para prioridad
       />
       <div className="pt-5 pb-1 flex-grow flex items-center justify-between">
         <div className="flex items-center space-x-4">
