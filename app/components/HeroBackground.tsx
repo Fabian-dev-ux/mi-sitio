@@ -126,7 +126,7 @@ const useMeshConfigs = (): MeshConfig[] => {
   ], []);
 };
 
-// Model component that loads and renders the 3D model
+// Model component optimizado para mobile
 function Model() {
   const gltf = useGLTF('/models/break.glb');
   const groupRef = useRef<Group>(null);
@@ -134,7 +134,7 @@ function Model() {
   const [meshes, setMeshes] = useState<Mesh[]>([]);
   const [initialized, setInitialized] = useState(false);
 
-  // Estados con throttling para mejor performance
+  // Estados con throttling - solo mouse para desktop, solo scroll para mobile
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [scrollProgress, setScrollProgress] = useState(0);
 
@@ -153,25 +153,28 @@ function Model() {
     rotation: Euler;
   }[]>([]);
 
-  // Callbacks memoizados para event listeners
+  // Callbacks memoizados para event listeners - SOLO para desktop
   const updateMousePosition = useCallback(
     throttle((e: MouseEvent) => {
+      if (isMobile) return; // Skip en mobile
       setMousePosition({
         x: (e.clientX / window.innerWidth) * 2 - 1,
         y: -((e.clientY / window.innerHeight) * 2 - 1)
       });
     }, 16), // ~60fps
-    []
+    [isMobile]
   );
 
+  // Callback de scroll - SOLO para desktop
   const updateScrollProgress = useCallback(
     throttle(() => {
+      if (isMobile) return; // Skip en mobile
       const scrollTop = window.scrollY;
       const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
       const progress = Math.min(Math.max(scrollTop / scrollHeight, 0), 1);
       setScrollProgress(progress);
     }, 16), // ~60fps
-    []
+    [isMobile]
   );
 
   // Initialize meshes and apply material
@@ -239,27 +242,25 @@ function Model() {
     };
   }, []);
 
-  // Event listeners optimizados
+  // Event listeners optimizados - SOLO para desktop
   useEffect(() => {
-    window.addEventListener('mousemove', updateMousePosition);
-    return () => window.removeEventListener('mousemove', updateMousePosition);
-  }, [updateMousePosition]);
+    if (!isMobile) {
+      window.addEventListener('mousemove', updateMousePosition);
+      return () => window.removeEventListener('mousemove', updateMousePosition);
+    }
+  }, [updateMousePosition, isMobile]);
 
   useEffect(() => {
-    updateScrollProgress();
-    window.addEventListener('scroll', updateScrollProgress);
-    return () => window.removeEventListener('scroll', updateScrollProgress);
-  }, [updateScrollProgress]);
+    if (!isMobile) {
+      updateScrollProgress();
+      window.addEventListener('scroll', updateScrollProgress);
+      return () => window.removeEventListener('scroll', updateScrollProgress);
+    }
+  }, [updateScrollProgress, isMobile]);
 
-  // Animation loop optimizado con early returns
+  // Animation loop optimizado - lógica separada para mobile vs desktop
   useFrame(() => {
     if (!initialized || meshes.length === 0) return;
-
-    // Batch calculations para mejor performance
-    const mouseInfluence = {
-      x: mousePosition.x * 0.15,
-      y: mousePosition.y * 0.15
-    };
 
     // Animate each mesh
     meshes.forEach((mesh, index) => {
@@ -292,8 +293,23 @@ function Model() {
       mesh.rotation.y += rotationConfig.y;
       mesh.rotation.z += rotationConfig.z;
 
-      // Add mouse-influenced rotation only for desktop
-      if (!isMobile) {
+      if (isMobile) {
+        // ===== MOBILE: Solo rotación automática, posición y escala fijas =====
+        mesh.position.set(
+          origPos.x + config.positionOffset[0],
+          origPos.y + config.positionOffset[1],
+          origPos.z + config.positionOffset[2]
+        );
+
+        mesh.scale.set(
+          origScale.x * config.scaleMultiplier[0],
+          origScale.y * config.scaleMultiplier[1],
+          origScale.z * config.scaleMultiplier[2]
+        );
+      } else {
+        // ===== DESKTOP: Todas las animaciones (mouse + scroll) =====
+        
+        // Add mouse-influenced rotation
         const uniqueFactor = 0.03 + (index * 0.01);
         const targetRotationX = mesh.rotation.x - (mousePosition.y * uniqueFactor);
         const targetRotationY = mesh.rotation.y + (mousePosition.x * uniqueFactor);
@@ -301,33 +317,38 @@ function Model() {
         // Smooth interpolation
         mesh.rotation.x += (targetRotationX - mesh.rotation.x) * 0.1;
         mesh.rotation.y += (targetRotationY - mesh.rotation.y) * 0.1;
+
+        // Pre-calculate scroll-based values
+        const zScrollFactor = 30 + (index * 4);
+        const zOffset = scrollProgress * zScrollFactor;
+
+        const xDispersionFactor = (index % 2 === 0 ? 1 : -1) * scrollProgress * (index + 1) * 4;
+        const yDispersionFactor = ((index % 3) - 1) * scrollProgress * (index + 1) * 3;
+
+        // Apply position with scroll effects
+        mesh.position.set(
+          origPos.x + config.positionOffset[0] + xDispersionFactor,
+          origPos.y + config.positionOffset[1] + yDispersionFactor,
+          origPos.z + config.positionOffset[2] + zOffset
+        );
+
+        // Apply scale with scroll factor
+        const scaleFactor = 1 + (scrollProgress * 1.2);
+        mesh.scale.set(
+          origScale.x * config.scaleMultiplier[0] * scaleFactor,
+          origScale.y * config.scaleMultiplier[1] * scaleFactor,
+          origScale.z * config.scaleMultiplier[2] * scaleFactor
+        );
       }
-
-      // Pre-calculate scroll-based values
-      const zScrollFactor = 30 + (index * 4);
-      const zOffset = scrollProgress * zScrollFactor;
-
-      const xDispersionFactor = (index % 2 === 0 ? 1 : -1) * scrollProgress * (index + 1) * 4;
-      const yDispersionFactor = ((index % 3) - 1) * scrollProgress * (index + 1) * 3;
-
-      // Apply position
-      mesh.position.set(
-        origPos.x + config.positionOffset[0] + xDispersionFactor,
-        origPos.y + config.positionOffset[1] + yDispersionFactor,
-        origPos.z + config.positionOffset[2] + zOffset
-      );
-
-      // Apply scale with scroll factor
-      const scaleFactor = 1 + (scrollProgress * 1.2);
-      mesh.scale.set(
-        origScale.x * config.scaleMultiplier[0] * scaleFactor,
-        origScale.y * config.scaleMultiplier[1] * scaleFactor,
-        origScale.z * config.scaleMultiplier[2] * scaleFactor
-      );
     });
 
-    // Rotate the group based on mouse position
-    if (groupRef.current) {
+    // Rotate the group based on mouse position - SOLO DESKTOP
+    if (groupRef.current && !isMobile) {
+      const mouseInfluence = {
+        x: mousePosition.x * 0.15,
+        y: mousePosition.y * 0.15
+      };
+      
       const targetRotationX = -mouseInfluence.y;
       const targetRotationY = -mouseInfluence.x;
 
