@@ -405,20 +405,20 @@ const TextElements = React.memo(() => {
 
   // Calculamos tamaños de fuente escalados
   const fontSizes = useMemo(() => ({
-    mobileFontSize: 0.78 * textConfig.scale,
+    mobileFontSize: 0.55 * textConfig.scale,
     desktopFontSize1: 0.75 * textConfig.scale,
     desktopFontSize2: 0.75 * textConfig.scale
   }), [textConfig.scale]);
 
   // Espaciado vertical base que se escalará
   const spacing = useMemo(() => ({
-    baseVerticalGapMobile: 0.64,
+    baseVerticalGapMobile: 0.45,
     baseVerticalGapDesktop: 0.7
   }), []);
 
   if (isMobile) {
     const mobileTextGap = spacing.baseVerticalGapMobile * textConfig.scale;
-    const lasHorizontalSpacing = 1.4;
+    const lasHorizontalSpacing = 1;
     const lasTextOffset = textConfig.mobileOffsetX * textConfig.scale * lasHorizontalSpacing;
 
     return (
