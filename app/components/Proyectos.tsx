@@ -81,18 +81,11 @@ const Proyectos: React.FC = () => {
   // Estado para manejar la inicialización
   const [isReady, setIsReady] = useState<boolean>(false);
 
+  // Estado para detectar dispositivos móviles
+  const [isMobile, setIsMobile] = useState<boolean>(false);
+
   // Hook para detectar cambios de ruta en Next.js
   const pathname = usePathname();
-
-  // Función helper para generar srcSet
-  const generateSrcSet = (desktopSrc: string, mobileSrc: string): string => {
-    return `${mobileSrc} 481w, ${desktopSrc} 1200w`;
-  };
-
-  // Función helper para generar sizes
-  const generateSizes = (): string => {
-    return "(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw";
-  };
 
   // Función para manejar el click en un proyecto
   const handleProjectClick = (project: ProjectData): void => {
@@ -266,15 +259,26 @@ const Proyectos: React.FC = () => {
     setupHoverAnimations();
   };
 
+  // Función para detectar si es móvil o cambio de tamaño
+  const checkMobile = (): void => {
+    setIsMobile(window.innerWidth <= 768);
+  };
+
   // useLayoutEffect para mediciones DOM antes del renderizado
   useLayoutEffect(() => {
     // Solo ejecutar en el cliente
     if (typeof window === "undefined") return;
 
+    // Verificar inicialmente si es móvil
+    checkMobile();
     setIsReady(true);
+
+    // Agregar listener para cambios de tamaño de ventana
+    window.addEventListener('resize', checkMobile);
 
     return () => {
       cleanupAnimations();
+      window.removeEventListener('resize', checkMobile);
       setIsReady(false);
     };
   }, []);
@@ -569,6 +573,9 @@ const Proyectos: React.FC = () => {
       };
     }, []);
 
+    // Determinar qué imagen usar basado en el estado isMobile
+    const imageSrc = isMobile ? mobileSrc : src;
+
     return (
       <div className="relative h-[250px] md:h-[300px] lg:h-[310px] xl:h-[350px] 2xl:h-[450px]">
         <div
@@ -591,12 +598,10 @@ const Proyectos: React.FC = () => {
               }}
             >
               <Image
-                src={src} // Imagen por defecto (desktop)
+                src={imageSrc}
                 alt={alt}
                 fill
-                // Implementación responsive
-                srcSet={generateSrcSet(src, mobileSrc)}
-                sizes={generateSizes()}
+                sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                 priority={index === 0} // Solo la primera imagen tiene prioridad
                 className="object-cover project-image transition-transform duration-100"
                 style={{
