@@ -2,10 +2,79 @@
   command = "npm run build"
   publish = "out"
 
+[build.environment]
+  NODE_VERSION = "18"
+  # Optimización de memoria para builds más rápidos
+  NODE_OPTIONS = "--max-old-space-size=4096"
+
+# Headers globales para performance y seguridad
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    X-XSS-Protection = "1; mode=block"
+    # Preload key resources - AJUSTA ESTAS RUTAS A TUS ARCHIVOS REALES
+    Link = '''</fonts/ClashDisplay-Regular.woff2>; rel=preload; as=font; type=font/woff2; crossorigin'''
+
+# Cache agresivo para assets de Next.js (tienen hash, son inmutables)
+[[headers]]
+  for = "/_next/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Cache para imágenes optimizadas
+[[headers]]
+  for = "*.webp"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000"
+    Vary = "Accept"
+
+[[headers]]
+  for = "*.avif"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000"
+    Vary = "Accept"
+
+# Cache para assets estáticos con hash
+[[headers]]
+  for = "/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Cache más corto para HTML (para actualizaciones rápidas)
+[[headers]]
+  for = "*.html"
+  [headers.values]
+    Cache-Control = "public, max-age=3600"
+
+# Cache para JavaScript y CSS con hash
+[[headers]]
+  for = "*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000"
+
+[[headers]]
+  for = "*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000"
+
+# Cache para fuentes
+[[headers]]
+  for = "*.woff2"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000"
+    Access-Control-Allow-Origin = "*"
+
+# Redirect para manejo de 404 personalizado
 [[redirects]]
   from = "/*"
   to = "/404.html"
   status = 404
 
-[build.environment]
-  NODE_VERSION = "18"
+# Prerender para mejor SEO (si tienes páginas específicas importantes)
+# [[headers]]
+#   for = "/about"
+#   [headers.values]
+#     Link = "</>; rel=prerender"
