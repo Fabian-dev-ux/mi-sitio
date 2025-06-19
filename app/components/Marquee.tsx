@@ -9,15 +9,14 @@ export default function InfiniteConveyorText() {
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const [textWidth, setTextWidth] = useState(0)
   
-  // Referencias para touch events
-  const touchStartY = useRef<number>(0)
-  const lastTouchY = useRef<number>(0)
-  
   useEffect(() => {
     if (!scrollContainer.current) return
     
     let speed = 4.0
-    let direction = -1 // Dirección por defecto
+    let direction = -1 // Dirección por defecto (siempre hacia la izquierda)
+    
+    // Detectar si es dispositivo móvil
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768
     
     // Calcular el ancho de un solo elemento de texto para clonar adecuadamente
     const singleTextElement = scrollContainer.current.querySelector('.text-item')
@@ -29,16 +28,24 @@ export default function InfiniteConveyorText() {
     const animate = () => {
       if (!scrollContainer.current) return
       
-      // Si no estamos haciendo scroll activamente, mantener velocidad base
-      if (!isScrolling.current) {
-        speed = speed * 0.9
-        if (speed < 4.0) {
-          speed = 4.0
+      // En móvil: movimiento constante sin cambios
+      // En desktop: lógica de scroll interactivo
+      if (isMobile) {
+        // Velocidad constante en móvil
+        speed = 4.0
+        direction = -1
+      } else {
+        // Si no estamos haciendo scroll activamente, mantener velocidad base
+        if (!isScrolling.current) {
+          speed = speed * 0.9
+          if (speed < 4.0) {
+            speed = 4.0
+          }
         }
+        
+        // Reset del flag de scroll para el próximo frame
+        isScrolling.current = false
       }
-      
-      // Reset del flag de scroll para el próximo frame
-      isScrolling.current = false
       
       // Desplazar la posición del contenedor
       const currentX = gsap.getProperty(scrollContainer.current, "x") as number
@@ -64,7 +71,7 @@ export default function InfiniteConveyorText() {
       animationRef.current = requestAnimationFrame(animate)
     }
     
-    // Función común para manejar el cambio de velocidad y dirección
+    // Función para manejar el scroll (solo en desktop)
     const handleScrollInput = (deltaY: number) => {
       // Marcar que estamos haciendo scroll activamente
       isScrolling.current = true
@@ -97,38 +104,23 @@ export default function InfiniteConveyorText() {
     // Inicia la animación automáticamente
     animationRef.current = requestAnimationFrame(animate)
     
-    // Evento de scroll para desktop
+    // Evento de scroll solo para desktop
     const handleWheel = (e: WheelEvent) => {
-      handleScrollInput(e.deltaY)
-    }
-    
-    // Eventos touch para móviles
-    const handleTouchStart = (e: TouchEvent) => {
-      touchStartY.current = e.touches[0].clientY
-      lastTouchY.current = e.touches[0].clientY
-    }
-    
-    const handleTouchMove = (e: TouchEvent) => {
-      const currentY = e.touches[0].clientY
-      const deltaY = lastTouchY.current - currentY
-      
-      // Solo procesar si hay un movimiento significativo
-      if (Math.abs(deltaY) > 2) {
-        handleScrollInput(deltaY * 2) // Multiplicamos por 2 para mayor sensibilidad en móvil
-        lastTouchY.current = currentY
+      if (!isMobile) {
+        handleScrollInput(e.deltaY)
       }
     }
     
-    // Agregar event listeners
-    window.addEventListener('wheel', handleWheel, { passive: true })
-    window.addEventListener('touchstart', handleTouchStart, { passive: true })
-    window.addEventListener('touchmove', handleTouchMove, { passive: true })
+    // Agregar event listener solo si no es móvil
+    if (!isMobile) {
+      window.addEventListener('wheel', handleWheel, { passive: true })
+    }
     
     // Limpieza
     return () => {
-      window.removeEventListener('wheel', handleWheel)
-      window.removeEventListener('touchstart', handleTouchStart)
-      window.removeEventListener('touchmove', handleTouchMove)
+      if (!isMobile) {
+        window.removeEventListener('wheel', handleWheel)
+      }
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current)
       }
