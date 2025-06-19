@@ -1,10 +1,50 @@
 'use client';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { gsap, ScrollTrigger } from '@/lib/gsapInit';
 
 const VideoReel = () => {
   const sectionRef = useRef(null);
   const videoRef = useRef(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const [videoSources, setVideoSources] = useState({ webm: '', mp4: '' });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    // Función para detectar si es mobile
+    const checkIsMobile = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      
+      // Establecer las fuentes del video según el tamaño de pantalla
+      if (mobile) {
+        setVideoSources({
+          webm: '/videos/vid-antagonik-mobile.webm',
+          mp4: '/videos/vid-antagonik-mobile.mp4'
+        });
+      } else {
+        setVideoSources({
+          webm: '/videos/vid-antagonik.webm',
+          mp4: '/videos/vid-antagonik.mp4'
+        });
+      }
+    };
+
+    // Verificar inicialmente
+    checkIsMobile();
+
+    // Escuchar cambios de tamaño de ventana
+    const handleResize = () => {
+      checkIsMobile();
+    };
+
+    window.addEventListener('resize', handleResize);
+
+    // Limpiar listener
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -13,9 +53,7 @@ const VideoReel = () => {
       if (!sectionRef.current || !videoRef.current) return;
 
       // Solo aplicar parallax en desktop (pantallas >= 768px)
-      const mediaQuery = window.matchMedia('(min-width: 768px)');
-      
-      if (mediaQuery.matches) {
+      if (!isMobile) {
         // OPCIÓN 3: Parallax con clip-path (SOLO DESKTOP)
         ScrollTrigger.create({
           trigger: sectionRef.current,
@@ -39,7 +77,23 @@ const VideoReel = () => {
     });
 
     return () => ctx.revert();
-  }, []);
+  }, [isMobile]);
+
+  // Función para recargar el video cuando cambien las fuentes
+  useEffect(() => {
+    if (videoRef.current && videoSources.webm) {
+      const video = videoRef.current;
+      const currentTime = video.currentTime;
+      
+      // Recargar el video con las nuevas fuentes
+      video.load();
+      
+      // Mantener el tiempo actual si es posible
+      video.addEventListener('loadedmetadata', () => {
+        video.currentTime = currentTime;
+      }, { once: true });
+    }
+  }, [videoSources]);
 
   return (
     <section 
@@ -59,13 +113,13 @@ const VideoReel = () => {
             transformOrigin: "center center"
           }}
         >
-          {/* Versión desktop */}
-          <source src="/videos/vid-antagonik.webm" media="(min-width: 768px)" type="video/webm" />
-          {/* Versión mobile */}
-          <source src="/videos/vid-antagonik-mobile.webm" media="(max-width: 767px)" type="video/webm" />
-          {/* Fallback para navegadores que no soporten webm */}
-          <source src="/videos/vid-antagonik.mp4" media="(min-width: 768px)" type="video/mp4" />
-          <source src="/videos/vid-antagonik-mobile.mp4" media="(max-width: 767px)" type="video/mp4" />
+          {/* Fuentes dinámicas basadas en el estado */}
+          {videoSources.webm && (
+            <source src={videoSources.webm} type="video/webm" />
+          )}
+          {videoSources.mp4 && (
+            <source src={videoSources.mp4} type="video/mp4" />
+          )}
         </video>
       </div>
     </section>
