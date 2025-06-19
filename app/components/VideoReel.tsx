@@ -45,10 +45,20 @@ const VideoReel = () => {
     };
   }, [isMobile, initialLoad]);
 
-  // Configuración de GSAP solo para desktop
+  // Configuración de GSAP solo para desktop - NUNCA en mobile
   useGSAP(() => {
-    if (!sectionRef.current || !videoRef.current || isMobile) return;
+    // Verificación doble para asegurar que NO se ejecute en mobile
+    if (!sectionRef.current || !videoRef.current || isMobile || window.innerWidth < 768) {
+      // Limpiar cualquier ScrollTrigger existente
+      ScrollTrigger.getAll().forEach(trigger => {
+        if (trigger.trigger === sectionRef.current) {
+          trigger.kill();
+        }
+      });
+      return;
+    }
 
+    // Solo crear parallax en desktop (≥768px)
     ScrollTrigger.create({
       trigger: sectionRef.current,
       start: "top bottom",
@@ -62,6 +72,26 @@ const VideoReel = () => {
     });
 
   }, { dependencies: [isMobile], scope: sectionRef });
+
+  // Efecto adicional para limpiar ScrollTriggers en mobile
+  useEffect(() => {
+    if (isMobile || window.innerWidth < 768) {
+      // Asegurar que NO haya ScrollTriggers activos en mobile
+      ScrollTrigger.getAll().forEach(trigger => {
+        if (trigger.trigger === sectionRef.current) {
+          trigger.kill();
+        }
+      });
+      
+      // Resetear transformaciones del video en mobile
+      if (videoRef.current) {
+        gsap.set(videoRef.current, { 
+          yPercent: 0, 
+          clearProps: "transform" 
+        });
+      }
+    }
+  }, [isMobile]);
 
   // Efecto para recargar video solo cuando realmente cambia mobile/desktop
   useEffect(() => {
@@ -100,8 +130,9 @@ const VideoReel = () => {
           className="absolute inset-0 w-full h-full object-cover"
           style={{
             transformOrigin: "center center",
-            transform: isMobile ? 'none' : undefined, // Sin transformaciones en mobile
-            willChange: isMobile ? 'auto' : 'transform' // Optimización de rendering
+            // Forzar sin transformaciones en mobile
+            transform: isMobile ? 'translate3d(0,0,0)' : undefined,
+            willChange: isMobile ? 'auto' : 'transform'
           }}
         >
           <source src={videoSources.webm} type="video/webm" />
