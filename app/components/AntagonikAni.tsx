@@ -33,6 +33,14 @@ const AntagonikAni: React.FC<AntagonikAniProps> = ({
   const svgImagesRef = useRef<HTMLImageElement[]>([]);
   const spheresRef = useRef<Matter.Body[]>([]);
   const isSetupCompleteRef = useRef<boolean>(false);
+  
+  // NUEVAS REFERENCIAS PARA CONTROLAR REINICIOS
+  const isAnimationRunningRef = useRef<boolean>(false);
+  const setupTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const resizeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastResizeTimeRef = useRef<number>(0);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastScrollTimeRef = useRef<number>(0);
 
   // useGSAP reemplaza useLayoutEffect para ScrollTrigger
   useGSAP(() => {
@@ -47,7 +55,7 @@ const AntagonikAni: React.FC<AntagonikAniProps> = ({
       },
       once: true
     });
-  }, { scope: sceneRef }); // Limita el scope al elemento sceneRef
+  }, { scope: sceneRef });
 
   // Función para detectar el tamaño de pantalla
   const getScreenSize = (width: number): 'mobile' | 'tablet' | 'laptop' | 'desktop' => {
@@ -79,23 +87,42 @@ const AntagonikAni: React.FC<AntagonikAniProps> = ({
     return counts[screenSize];
   };
 
-  // Hook para detectar cambios en el tamaño de pantalla
+  // Hook para detectar cambios en el tamaño de pantalla CON DEBOUNCE
   useEffect(() => {
     const handleResize = () => {
-      const width = window.innerWidth;
-      const newScreenSize = getScreenSize(width);
+      const now = Date.now();
+      lastResizeTimeRef.current = now;
       
-      if (newScreenSize !== screenSize) {
-        setScreenSize(newScreenSize);
+      // Limpiar timeout anterior
+      if (resizeTimeoutRef.current) {
+        clearTimeout(resizeTimeoutRef.current);
       }
+      
+      // Debounce para evitar múltiples ejecuciones
+      resizeTimeoutRef.current = setTimeout(() => {
+        // Verificar que este es el último evento de resize
+        if (now === lastResizeTimeRef.current) {
+          const width = window.innerWidth;
+          const newScreenSize = getScreenSize(width);
+          
+          if (newScreenSize !== screenSize) {
+            setScreenSize(newScreenSize);
+          }
+        }
+      }, 150); // Debounce de 150ms
     };
 
     handleResize();
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      if (resizeTimeoutRef.current) {
+        clearTimeout(resizeTimeoutRef.current);
+      }
+    };
   }, [screenSize]);
 
-  // Función para limpiar completamente las animaciones y física (Matter.js específicas)
+  // Función para limpiar completamente las animaciones y física
   const cleanupPhysics = () => {
     if (requestRef.current !== null) {
       cancelAnimationFrame(requestRef.current);
@@ -135,8 +162,8 @@ const AntagonikAni: React.FC<AntagonikAniProps> = ({
     runnerRef.current = null;
     spheresRef.current = [];
     wallsRef.current = { left: null, right: null };
-    
-    // Ya no necesitamos limpiar ScrollTriggers manualmente - useGSAP lo hace
+    isAnimationRunningRef.current = false;
+    isSetupCompleteRef.current = false;
   };
 
   // Función separada para crear línea visual de suelo
@@ -197,13 +224,20 @@ const AntagonikAni: React.FC<AntagonikAniProps> = ({
     }
   };
 
-  // Función para inicializar o reiniciar toda la animación
+  // Función para inicializar o reiniciar toda la animación CON PROTECCIÓN CONTRA REINICIOS
   const setupAnimation = () => {
+    // PROTECCIÓN: No reiniciar si ya está ejecutándose
+    if (isAnimationRunningRef.current || !isVisible || !sceneRef.current) {
+      return;
+    }
+
+    // Marcar como ejecutándose
+    isAnimationRunningRef.current = true;
+
+    // Limpiar animación anterior si existe
     if (isSetupCompleteRef.current) {
       cleanupPhysics();
     }
-    
-    if (!sceneRef.current || !isVisible) return;
 
     const baseSphereSize = getBaseSphereSize(screenSize);
     const numberOfSpheres = getNumberOfSpheres(screenSize);
@@ -338,6 +372,11 @@ const AntagonikAni: React.FC<AntagonikAniProps> = ({
     svgImagesRef.current = svgImages;
     
     const updateSvgPositions = () => {
+      // Verificar que la animación sigue activa
+      if (!isAnimationRunningRef.current || !engineRef.current) {
+        return;
+      }
+
       spheres.forEach((sphere, index) => {
         if (svgImages[index]) {
           const img = svgImages[index];
@@ -365,7 +404,7 @@ const AntagonikAni: React.FC<AntagonikAniProps> = ({
       const img = new Image();
       img.src = imgPath;
       img.onload = () => {
-        if (sceneRef.current) {
+        if (sceneRef.current && isAnimationRunningRef.current) {
           sceneRef.current.appendChild(img);
           svgImages[index] = img;
         }
@@ -379,22 +418,29 @@ const AntagonikAni: React.FC<AntagonikAniProps> = ({
     isSetupCompleteRef.current = true;
   };
 
-  // Efecto para iniciar la animación cuando sea visible o cuando cambie el tamaño de pantalla
+  // Efecto para iniciar la animación SOLO cuando sea visible y CON DEBOUNCE
   useEffect(() => {
-    if (isVisible) {
-      const initTimer = setTimeout(() => {
+    if (isVisible && !isAnimationRunningRef.current) {
+      // Limpiar timeout anterior
+      if (setupTimeoutRef.current) {
+        clearTimeout(setupTimeoutRef.current);
+      }
+      
+      setupTimeoutRef.current = setTimeout(() => {
         setupAnimation();
-      }, 100);
+      }, 200); // Aumentado el delay para evitar reinicios rápidos
       
       return () => {
-        clearTimeout(initTimer);
+        if (setupTimeoutRef.current) {
+          clearTimeout(setupTimeoutRef.current);
+        }
       };
     }
   }, [isVisible, containerBounds, animationSpeed, screenSize]);
 
-  // Efecto para actualizar las paredes cuando cambian las dimensiones del contenedor
+  // Efecto para actualizar las paredes SOLO si la animación está corriendo
   useEffect(() => {
-    if (!engineRef.current || !containerBounds.width || !wallsRef.current.left || !wallsRef.current.right) return;
+    if (!engineRef.current || !containerBounds.width || !wallsRef.current.left || !wallsRef.current.right || !isAnimationRunningRef.current) return;
 
     const { left, width } = containerBounds;
     const leftWallX = left;
@@ -415,10 +461,10 @@ const AntagonikAni: React.FC<AntagonikAniProps> = ({
     }
   }, [containerBounds]);
 
-  // Efecto para manejar eventos de visibilidad y navegación
+  // Efecto para manejar eventos de visibilidad y navegación CON PROTECCIONES MEJORADAS
   useEffect(() => {
     const handleResize = () => {
-      if (sceneRef.current && rendererRef.current) {
+      if (sceneRef.current && rendererRef.current && isAnimationRunningRef.current) {
         const newWidth = sceneRef.current.clientWidth;
         const newHeight = sceneRef.current.clientHeight;
 
@@ -428,43 +474,90 @@ const AntagonikAni: React.FC<AntagonikAniProps> = ({
         rendererRef.current.bounds.max.y = newHeight;
         Render.setPixelRatio(rendererRef.current, window.devicePixelRatio);
         
-        ScrollTrigger.refresh();
+        // Debounce para ScrollTrigger.refresh()
+        if (scrollTimeoutRef.current) {
+          clearTimeout(scrollTimeoutRef.current);
+        }
+        scrollTimeoutRef.current = setTimeout(() => {
+          ScrollTrigger.refresh();
+        }, 100);
       }
     };
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        if (isVisible && !engineRef.current) {
+        // SOLO reiniciar si no hay animación ejecutándose
+        if (isVisible && !isAnimationRunningRef.current) {
           setTimeout(() => {
             ScrollTrigger.refresh();
             setupAnimation();
-          }, 100);
+          }, 300); // Delay mayor para estabilidad
         }
       }
     };
 
     const handleRouteChange = () => {
-      setTimeout(() => {
-        ScrollTrigger.refresh();
-        if (isVisible && !engineRef.current) {
+      // SOLO reiniciar si no hay animación ejecutándose
+      if (isVisible && !isAnimationRunningRef.current) {
+        setTimeout(() => {
+          ScrollTrigger.refresh();
           setupAnimation();
-        }
-      }, 100);
+        }, 300);
+      }
     };
 
-    window.addEventListener('resize', handleResize);
+    // PREVENIR EVENTOS DE SCROLL/TOUCH QUE PUEDAN REINICIAR LA ANIMACIÓN
+    const handleTouchMove = (e: TouchEvent) => {
+      // No prevenir el comportamiento por defecto para mantener el scroll natural
+      // Solo evitar que se disparen reinicios
+      e.stopPropagation();
+    };
+
+    const handleScroll = () => {
+      // Throttle para evitar múltiples llamadas
+      const now = Date.now();
+      if (now - lastScrollTimeRef.current < 100) {
+        return;
+      }
+      lastScrollTimeRef.current = now;
+    };
+
+    window.addEventListener('resize', handleResize, { passive: true });
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('popstate', handleRouteChange);
+    
+    // Eventos móviles con opciones pasivas para mejor rendimiento
+    document.addEventListener('touchmove', handleTouchMove, { passive: true });
+    window.addEventListener('scroll', handleScroll, { passive: true });
     
     return () => {
       window.removeEventListener('resize', handleResize);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('popstate', handleRouteChange);
+      document.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('scroll', handleScroll);
+      
+      // Limpiar todos los timeouts
+      if (setupTimeoutRef.current) clearTimeout(setupTimeoutRef.current);
+      if (resizeTimeoutRef.current) clearTimeout(resizeTimeoutRef.current);
+      if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+      
       cleanupPhysics();
     };
   }, [isVisible]);
 
-  return <div ref={sceneRef} className="w-full h-screen relative"></div>;
+  return (
+    <div 
+      ref={sceneRef} 
+      className="w-full h-screen relative"
+      style={{
+        // Mejorar el rendimiento en móviles
+        willChange: 'transform',
+        transform: 'translateZ(0)', // Forzar aceleración de hardware
+        touchAction: 'pan-y', // Permitir solo scroll vertical
+      }}
+    />
+  );
 };
 
 export default AntagonikAni;
