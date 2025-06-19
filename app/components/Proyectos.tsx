@@ -457,7 +457,8 @@ const Proyectos: React.FC = () => {
     };
 
     const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>): void => {
-      if (!containerRef.current || !showButton) return;
+      // Prevenir el movimiento del botón en móviles
+      if (isMobile || !containerRef.current || !showButton) return;
 
       // Actualizar posición global del cursor
       lastViewportPosition.current = { x: e.clientX, y: e.clientY };
@@ -474,6 +475,9 @@ const Proyectos: React.FC = () => {
     };
 
     const handleMouseEnter = (e: React.MouseEvent<HTMLDivElement>): void => {
+      // Prevenir que el botón aparezca en dispositivos móviles
+      if (isMobile) return;
+      
       if (!containerRef.current) return;
 
       isMouseInside.current = true;
@@ -492,6 +496,12 @@ const Proyectos: React.FC = () => {
     };
 
     const handleMouseLeave = (): void => {
+      // En móvil, asegurarse de que el botón no se muestre
+      if (isMobile) {
+        setShowButton(false);
+        return;
+      }
+
       isMouseInside.current = false;
 
       if (currentAnimationRef.current) {
@@ -525,7 +535,7 @@ const Proyectos: React.FC = () => {
 
     // Efecto para animar la entrada del botón
     useEffect(() => {
-      if (showButton && buttonRef.current) {
+      if (showButton && buttonRef.current && !isMobile) {
         gsap.set(buttonRef.current, {
           x: buttonPosition.current.x,
           y: buttonPosition.current.y,
@@ -548,15 +558,28 @@ const Proyectos: React.FC = () => {
           }
         });
       }
-    }, [showButton]);
+    }, [showButton, isMobile]);
+
+    // useEffect adicional para forzar el ocultamiento en móvil
+    useEffect(() => {
+      if (isMobile && showButton) {
+        setShowButton(false);
+        if (animationFrameRef.current) {
+          cancelAnimationFrame(animationFrameRef.current);
+          animationFrameRef.current = null;
+        }
+      }
+    }, [isMobile, showButton]);
 
     // Listener para el scroll
     useEffect(() => {
-      window.addEventListener('scroll', handleScroll, { passive: true });
-      return () => {
-        window.removeEventListener('scroll', handleScroll);
-      };
-    }, [showButton]);
+      if (!isMobile) {
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        return () => {
+          window.removeEventListener('scroll', handleScroll);
+        };
+      }
+    }, [showButton, isMobile]);
 
     // Cleanup
     useEffect(() => {
@@ -612,26 +635,28 @@ const Proyectos: React.FC = () => {
             </div>
           </div>
 
-          {/* Botón píldora redondeado */}
-          <div
-            ref={buttonRef}
-            className="absolute h-12 px-6 bg-black bg-opacity-75 backdrop-blur-sm flex items-center justify-center text-gray-300 font-archivo font-medium text-sm md:text-base uppercase tracking-wider pointer-events-none"
-            style={{
-              willChange: 'transform, opacity',
-              backfaceVisibility: 'hidden',
-              zIndex: 50,
-              left: 0,
-              top: 0,
-              opacity: 0,
-              transform: 'scale(0) translate(-50%, -50%)',
-              display: showButton ? 'flex' : 'none',
-              borderRadius: '24px', // Hace el botón tipo píldora
-              minWidth: 'fit-content',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            {projectTitle === 'YOKUN' ? 'PRÓXIMAMENTE' : '[VER]'}
-          </div>
+          {/* Botón píldora redondeado - solo en desktop */}
+          {!isMobile && (
+            <div
+              ref={buttonRef}
+              className="absolute h-12 px-6 bg-black bg-opacity-75 backdrop-blur-sm flex items-center justify-center text-gray-300 font-archivo font-medium text-sm md:text-base uppercase tracking-wider pointer-events-none"
+              style={{
+                willChange: 'transform, opacity',
+                backfaceVisibility: 'hidden',
+                zIndex: 50,
+                left: 0,
+                top: 0,
+                opacity: 0,
+                transform: 'scale(0) translate(-50%, -50%)',
+                display: showButton ? 'flex' : 'none',
+                borderRadius: '24px', // Hace el botón tipo píldora
+                minWidth: 'fit-content',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              {projectTitle === 'YOKUN' ? 'PRÓXIMAMENTE' : '[VER]'}
+            </div>
+          )}
         </div>
       </div>
     );
