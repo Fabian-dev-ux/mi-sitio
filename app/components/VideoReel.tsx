@@ -1,6 +1,7 @@
 'use client';
 import React, { useEffect, useRef, useState } from 'react';
 import { gsap, ScrollTrigger } from '@/lib/gsapInit';
+import { useGSAP } from "@gsap/react";
 
 const VideoReel = () => {
   const sectionRef = useRef<HTMLElement>(null);
@@ -46,38 +47,33 @@ const VideoReel = () => {
     };
   }, []);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
+  // Reemplazar el useEffect de GSAP con useGSAP
+  useGSAP(() => {
+    if (!sectionRef.current || !videoRef.current) return;
 
-    const ctx = gsap.context(() => {
-      if (!sectionRef.current || !videoRef.current) return;
-
-      // Solo aplicar parallax en desktop (pantallas >= 768px)
-      if (!isMobile) {
-        // OPCIÓN 3: Parallax con clip-path (SOLO DESKTOP)
-        ScrollTrigger.create({
-          trigger: sectionRef.current,
-          start: "top bottom",
-          end: "bottom top",
-          scrub: true,
-          animation: gsap.fromTo(
-            videoRef.current,
-            { 
-              yPercent: -45,
-              clipPath: "inset(0% 0% 0% 0%)"
-            },
-            { 
-              yPercent: 45,
-              clipPath: "inset(0% 0% 0% 0%)",
-              ease: "none" 
-            }
-          )
-        });
-      }
-    });
-
-    return () => ctx.revert();
-  }, [isMobile]);
+    // Solo aplicar parallax en desktop (pantallas >= 768px)
+    if (!isMobile) {
+      // OPCIÓN 3: Parallax con clip-path (SOLO DESKTOP)
+      ScrollTrigger.create({
+        trigger: sectionRef.current,
+        start: "top bottom",
+        end: "bottom top",
+        scrub: true,
+        animation: gsap.fromTo(
+          videoRef.current,
+          { 
+            yPercent: -45,
+            clipPath: "inset(0% 0% 0% 0%)"
+          },
+          { 
+            yPercent: 45,
+            clipPath: "inset(0% 0% 0% 0%)",
+            ease: "none" 
+          }
+        )
+      });
+    }
+  }, { dependencies: [isMobile], scope: sectionRef });
 
   // Función para recargar el video cuando cambien las fuentes
   useEffect(() => {
