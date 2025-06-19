@@ -413,21 +413,21 @@ const Navbar = () => {
             {/* Email y teléfono */}
             <div className="flex flex-col space-y-0.5">
               <a href="mailto:info@antagonik.com" className="hover:text-dark/75 transition-colors">info@antagonik.com</a>
-              <a href="tel:+593984196542" className="hover:text-dark/75 transition-colors">[ 593 ] 98 419 6542</a>
+              <a href="https://wa.me/message/6HLV5OAO5GMBO1" target="_blank" rel="noopener noreferrer" className="hover:text-dark/75 transition-colors">[ 593 ] 98 419 6542</a>
             </div>
 
-            {/* Redes sociales */}
+            {/* Redes sociales - Reorganizadas: LinkedIn, Behance, Instagram */}
             <div className="flex items-center space-x-2 text-dark">
-              <a href="https://instagram.com/antagonik" target="_blank" rel="noopener noreferrer" className="hover:text-dark/75 transition-colors">
-                Instagram
+              <a href="https://linkedin.com/in/fabián-barriga-castellano-264015246" target="_blank" rel="noopener noreferrer" className="hover:text-dark/75 transition-colors">
+                LinkedIn
               </a>
               <span>/</span>
-              <a href="https://behance.net/antagonik" target="_blank" rel="noopener noreferrer" className="hover:text-dark/75 transition-colors">
+              <a href="https://www.behance.net/antagonik-estudio" target="_blank" rel="noopener noreferrer" className="hover:text-dark/75 transition-colors">
                 Behance
               </a>
               <span>/</span>
-              <a href="https://linkedin.com/company/antagonik" target="_blank" rel="noopener noreferrer" className="hover:text-dark/75 transition-colors">
-                LinkedIn
+              <a href="https://instagram.com/antagonik" target="_blank" rel="noopener noreferrer" className="hover:text-dark/75 transition-colors">
+                Instagram
               </a>
             </div>
           </div>
