@@ -20,24 +20,60 @@ const ParallaxImage: React.FC<ParallaxImageProps> = ({ src, alt }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const imageWrapperRef = useRef<HTMLDivElement>(null);
   const [isMobile, setIsMobile] = React.useState(false);
+  const scrollTriggerRef = useRef<ScrollTrigger | null>(null);
 
   // Detectar si es móvil al montar y en resize
   React.useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
+      const newIsMobile = window.innerWidth < 768;
+      setIsMobile(newIsMobile);
+      
+      // Si cambia a móvil y hay un ScrollTrigger activo, destruirlo
+      if (newIsMobile && scrollTriggerRef.current) {
+        scrollTriggerRef.current.kill();
+        scrollTriggerRef.current = null;
+        
+        // Resetear la posición de la imagen
+        if (imageWrapperRef.current) {
+          gsap.set(imageWrapperRef.current, {
+            y: "0%",
+            clearProps: "transform"
+          });
+        }
+      }
     };
     
     checkMobile();
     window.addEventListener('resize', checkMobile);
     
-    return () => window.removeEventListener('resize', checkMobile);
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+      // Limpiar ScrollTrigger al desmontar
+      if (scrollTriggerRef.current) {
+        scrollTriggerRef.current.kill();
+      }
+    };
   }, []);
 
   useGSAP(() => {
-    if (!containerRef.current || !imageWrapperRef.current || isMobile) return;
+    if (!containerRef.current || !imageWrapperRef.current || isMobile) {
+      // Si es móvil, asegurar que la imagen esté en posición normal
+      if (isMobile && imageWrapperRef.current) {
+        gsap.set(imageWrapperRef.current, {
+          y: "0%",
+          clearProps: "transform"
+        });
+      }
+      return;
+    }
+
+    // Limpiar ScrollTrigger anterior si existe
+    if (scrollTriggerRef.current) {
+      scrollTriggerRef.current.kill();
+    }
 
     // Solo crear el ScrollTrigger en desktop
-    ScrollTrigger.create({
+    scrollTriggerRef.current = ScrollTrigger.create({
       trigger: containerRef.current,
       start: "top bottom",
       end: "bottom top",
@@ -50,6 +86,13 @@ const ParallaxImage: React.FC<ParallaxImageProps> = ({ src, alt }) => {
         });
       }
     });
+
+    return () => {
+      if (scrollTriggerRef.current) {
+        scrollTriggerRef.current.kill();
+        scrollTriggerRef.current = null;
+      }
+    };
   }, { scope: containerRef, dependencies: [isMobile] });
 
   return (
@@ -74,6 +117,7 @@ const ParallaxImage: React.FC<ParallaxImageProps> = ({ src, alt }) => {
           fill
           sizes="(max-width: 768px) 100vw, 50vw"
           className="object-cover"
+          priority={false}
         />
       </div>
     </div>
@@ -187,7 +231,7 @@ const Encabezado: React.FC<EncabezadoProps> = ({
         }
       );
     }
-  }, { scope: headerRef }); // useGSAP limpia automáticamente
+  }, { scope: headerRef });
 
   const createWordContainers = (text: string) => {
     return text.split(" ").map((word, index) => (
