@@ -5,7 +5,7 @@ import { gsap, ScrollTrigger } from '@/lib/gsapInit';
 import { useGSAP } from "@gsap/react";
 import Link from 'next/link';
 import Image from 'next/image';
-import { FaInstagram, FaFacebookF, FaLinkedinIn } from 'react-icons/fa';
+import { FaInstagram, FaLinkedinIn, FaBehance } from 'react-icons/fa';
 import SlideTextOnHover from './SlideTextOnHover';
 import MagneticButton from './MagneticButton';
 
@@ -49,7 +49,7 @@ const Footer = () => {
             <div className="md:col-span-4 md:col-start-9 order-first md:order-last pt-1">
               <div>
                 <h2 className="font-display font-semibold text-dark text-4xl 2xl:text-5xl tracking-tight uppercase inline-block mb-4">
-                  ACTIVEMOS EL FUTURO VIRTUAL DE SU MARCA
+                  LLEVEMOS TU PROYECTO AL SIGUIENTE NIVEL 
                 </h2>
                 <MagneticButton
                   magneticStrength={0.3}
@@ -85,43 +85,35 @@ const Footer = () => {
                 {/* Contact info and Social media */}
                 <div className="contact-info-social flex flex-col ml-0 md:ml-0 lg:ml-0 xl:ml-0 2xl:ml-8">
                   <div className="mb-2">
-                    <p className="uppercase text-base font-normal text-dark font-archivo">INFO@ANTAGONIK.COM</p>
-                    <p className="text-dark text-[1.188rem] font-archivo font-normal mt-1">[ 593 ] 98 419 6542</p>
+                    <p className="mb-0">
+                      <a 
+                        href="mailto:INFO@ANTAGONIK.COM" 
+                        className="uppercase text-base font-normal text-dark font-archivo relative inline-block group"
+                      >
+                        INFO@ANTAGONIK.COM
+                        <span className="absolute left-0 bottom-0 w-full h-px bg-dark transform scale-x-0 origin-left transition-transform duration-300 ease-out group-hover:scale-x-100"></span>
+                      </a>
+                    </p>
+                    <p className="mt-1">
+                      <a 
+                        href="https://wa.me/message/6HLV5OAO5GMBO1" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-dark text-[1.188rem] font-archivo font-normal relative inline-block group"
+                      >
+                        [ 593 ] 98 419 6542
+                        <span className="absolute left-0 bottom-0 w-full h-px bg-dark transform scale-x-0 origin-left transition-transform duration-300 ease-out group-hover:scale-x-100"></span>
+                      </a>
+                    </p>
                   </div>
 
-                  {/* Social media icons */}
+                  {/* Social media icons - Reorganized: LinkedIn, Behance, Instagram */}
                   <div className="flex gap-2 mt-4">
-                    {/* Instagram icon with SlideTextOnHover effect */}
-                    <Link
-                      href="https://instagram.com"
-                      className="bg-dark w-7 h-7 flex items-center justify-center text-primary group"
-                      aria-label="Instagram"
-                    >
-                      <div className="relative w-full h-full flex items-center justify-center">
-                        <SlideTextOnHover
-                          originalText={<FaInstagram className="text-[0.9em]" />}
-                          hoverText={<FaInstagram className="text-[0.9em]" />}
-                        />
-                      </div>
-                    </Link>
-                    
-                    {/* Facebook icon with SlideTextOnHover effect */}
-                    <Link
-                      href="https://facebook.com"
-                      className="bg-dark w-7 h-7 flex items-center justify-center text-primary group"
-                      aria-label="Facebook"
-                    >
-                      <div className="relative w-full h-full flex items-center justify-center">
-                        <SlideTextOnHover
-                          originalText={<FaFacebookF className="text-[0.8em]" />}
-                          hoverText={<FaFacebookF className="text-[0.8em]" />}
-                        />
-                      </div>
-                    </Link>
-                    
                     {/* LinkedIn icon with SlideTextOnHover effect */}
                     <Link
-                      href="https://linkedin.com"
+                      href="https://linkedin.com/in/fabián-barriga-castellano-264015246"
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="bg-dark w-7 h-7 flex items-center justify-center text-primary group"
                       aria-label="LinkedIn"
                     >
@@ -129,6 +121,38 @@ const Footer = () => {
                         <SlideTextOnHover
                           originalText={<FaLinkedinIn className="text-[0.9em]" />}
                           hoverText={<FaLinkedinIn className="text-[0.9em]" />}
+                        />
+                      </div>
+                    </Link>
+                    
+                    {/* Behance icon with SlideTextOnHover effect */}
+                    <Link
+                      href="https://www.behance.net/antagonik-estudio"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="bg-dark w-7 h-7 flex items-center justify-center text-primary group"
+                      aria-label="Behance"
+                    >
+                      <div className="relative w-full h-full flex items-center justify-center">
+                        <SlideTextOnHover
+                          originalText={<FaBehance className="text-[0.9em]" />}
+                          hoverText={<FaBehance className="text-[0.9em]" />}
+                        />
+                      </div>
+                    </Link>
+                    
+                    {/* Instagram icon with SlideTextOnHover effect */}
+                    <Link
+                      href="https://instagram.com"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="bg-dark w-7 h-7 flex items-center justify-center text-primary group"
+                      aria-label="Instagram"
+                    >
+                      <div className="relative w-full h-full flex items-center justify-center">
+                        <SlideTextOnHover
+                          originalText={<FaInstagram className="text-[0.9em]" />}
+                          hoverText={<FaInstagram className="text-[0.9em]" />}
                         />
                       </div>
                     </Link>
