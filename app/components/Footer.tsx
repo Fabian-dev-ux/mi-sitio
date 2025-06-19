@@ -44,7 +44,7 @@ const Footer = () => {
       <div className="pt-12 pb-8 px-4 md:px-6 lg:px-8 xl:px-10 2xl:px-20 w-full">
         {/* Top section with contact and navigation */}
         <div ref={parallaxTargetRef} className="mx-auto w-full">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 border-black/30 pt-8 md:pt-32 lg:pt-16 xl:pt-24 2xl:pt-32 pb-0">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 border-black/30 pt-4 md:pt-32 lg:pt-16 xl:pt-24 2xl:pt-32 pb-0">
             {/* CTA Section - Se muestra primero en móvil */}
             <div className="md:col-span-4 md:col-start-9 order-first md:order-last pt-1">
               <div>
@@ -69,7 +69,7 @@ const Footer = () => {
             </div>
 
             {/* Left column - Contact */}
-            <div className="md:col-span-3 border-t border-black/30 pt-4 pb-4 order-2">
+            <div className="md:col-span-3 border-t border-black/30 pt-4  order-2">
               <h3 className="text-sm font-normal uppercase font-archivo mb-6 text-gray-900">Contactos</h3>
               <div className="contact-container flex items-start mb-6">
                 {/* Logo - visible only on 2xl and mobile screens (hidden on md, lg, xl) */}
@@ -138,7 +138,7 @@ const Footer = () => {
             </div>
 
             {/* Middle column - Navigation */}
-            <div className="md:col-span-3 border-t border-black/30 pt-4 order-3">
+            <div className="md:col-span-3 border-t border-black/30 pt-4 pb-4 order-3">
               <h3 className="text-sm uppercase font-normal font-archivo mb-6 text-dark">Navegación</h3>
               <ul className="mb-0 font-archivo text-base uppercase">
                 <li className="leading-tight mb-0">
