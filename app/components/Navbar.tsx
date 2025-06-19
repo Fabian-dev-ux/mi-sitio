@@ -7,7 +7,7 @@ import { gsap } from "@/lib/gsapInit"; // Usar tu configuración centralizada
 import { useGSAP } from "@gsap/react"; // Importar useGSAP
 
 const Navbar = () => {
-  // Estado para controlar la animación del indicador de disponibilidad
+  // Estado para controlar la animación del indicador de WhatsApp
   const [isActive, setIsActive] = useState<boolean>(true);
   // Estado para controlar el menú hamburguesa
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
@@ -151,7 +151,7 @@ const Navbar = () => {
                   />
                   <path
                     className="gray-100"
-                    d="m131.28,24.96c-1.36-.74-2.44-1.78-3.25-3.1-.81-1.32-1.22-2.82-1.22-4.48s.41-3.16,1.22-4.48c.81-1.32,1.89-2.35,3.25-3.10,1.35-.74,2.82-1.12,4.4-1.12s3.04.37,4.4,1.12c1.35.74,2.44,1.78,3.25,3.10.81,1.32,1.22,2.82,1.22,4.48s-.41,3.16-1.22,4.48c-.81,1.32-1.89,2.35-3.25,3.10-1.36.74-2.82,1.12-4.4,1.12s-3.04-.37-4.4-1.12Zm7.1-2.83c.82-.48,1.47-1.13,1.93-1.97.47-.83.7-1.76.7-2.78s-.23-1.95-.7-2.78c-.47-.83-1.11-1.49-1.93-1.97-.82-.48-1.72-.72-2.7-.72s-1.91.24-2.73.72c-.82.48-1.47,1.13-1.93,1.97-.47.83-.7,1.76-.7,2.78s.23,1.95.7,2.78c.47.83,1.11,1.49,1.93,1.97.82.48,1.73.72,2.73.72s1.88-.24,2.7-.72Z"
+                    d="m131.28,24.96c-1.36-.74-2.44-1.78-3.25-3.10-.81-1.32-1.22-2.82-1.22-4.48s.41-3.16,1.22-4.48c.81-1.32,1.89-2.35,3.25-3.10,1.35-.74,2.82-1.12,4.4-1.12s3.04.37,4.4,1.12c1.35.74,2.44,1.78,3.25,3.10.81,1.32,1.22,2.82,1.22,4.48s-.41,3.16-1.22,4.48c-.81,1.32-1.89,2.35-3.25,3.10-1.36.74-2.82,1.12-4.4,1.12s-3.04-.37-4.4-1.12Zm7.1-2.83c.82-.48,1.47-1.13,1.93-1.97.47-.83.7-1.76.7-2.78s-.23-1.95-.7-2.78c-.47-.83-1.11-1.49-1.93-1.97-.82-.48-1.72-.72-2.7-.72s-1.91.24-2.73.72c-.82.48-1.47,1.13-1.93,1.97-.47.83-.7,1.76-.7,2.78s.23,1.95.7,2.78c.47.83,1.11,1.49,1.93,1.97.82.48,1.73.72,2.73.72s1.88-.24,2.7-.72Z"
                   />
                   <path
                     className="gray-100"
@@ -237,13 +237,13 @@ const Navbar = () => {
           </li>
         </ul>
 
-        {/* Botón de contacto e indicador de disponibilidad */}
+        {/* Botón de contacto e indicador de WhatsApp */}
         <div className="flex items-center justify-end col-span-1 lg:col-span-3 space-x-6">
           {/* Botón de contacto */}
           <div className="hidden lg:flex">
             <MagneticButton
               magneticStrength={0.5}
-              magneticArea={150}
+              magneticArea={50}
             >
               <Link
                 href="/contacto"
@@ -258,11 +258,21 @@ const Navbar = () => {
             </MagneticButton>
           </div>
 
-          {/* Indicador de disponibilidad */}
-          <div className="hidden lg:flex items-center text-gray-500 font-archivo text-sm font-regular text-gray-600">
-            {/* Círculo animado que parpadea entre naranja y gris */}
-            <span className={`transition-colors duration-300 ease-in-out ${isActive ? 'text-primary' : 'text-gray-700'} text-xl`}>•</span>{" "}
-            <span className="ml-1">DISPONIBLE</span>
+          {/* Enlace de WhatsApp */}
+          <div className="hidden lg:flex items-center">
+            <a 
+              href="https://wa.me/message/6HLV5OAO5GMBO1"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center text-gray-500 font-archivo text-sm font-regular text-gray-600"
+            >
+              {/* Círculo animado que parpadea entre naranja y gris */}
+              <span className={`transition-colors duration-300 ease-in-out ${isActive ? 'text-primary' : 'text-gray-700'} text-xl`}>•</span>{" "}
+              <span className="ml-1 relative group">
+                WSP (593) 9841 96542
+                <span className="absolute left-0 bottom-0 w-full h-[1px] bg-gray-600 scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-out origin-left"></span>
+              </span>
+            </a>
           </div>
 
           {/* Botón hamburguesa - Visible en pantallas pequeñas y medianas */}
