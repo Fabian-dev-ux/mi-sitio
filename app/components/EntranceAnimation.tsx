@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
-import { gsap, ScrollTrigger } from "@/lib/gsapInit";
+import { useState, useRef } from 'react';
+import { gsap } from 'gsap';
+import { useGSAP } from '@gsap/react';
 
 // Utility to detect if we're in a browser (not in SSR)
 const isBrowser = typeof window !== 'undefined';
@@ -9,13 +10,6 @@ interface EntranceAnimationProps {
     devMode?: boolean;
     logoWidth?: string; // Este parámetro ahora será ignorado en favor de responsive
     onAnimationComplete?: () => void;
-}
-
-// Define cache interface
-interface ElementsCache {
-    letters: Element[] | null;
-    letterHeight: number;
-    timeline: gsap.core.Timeline | null;
 }
 
 export default function EntranceAnimation({
@@ -40,112 +34,52 @@ export default function EntranceAnimation({
     const bgStrip3Ref = useRef<HTMLDivElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
-    // Cache for frequently used DOM elements - Fixed type definition
-    const elementsCache = useRef<ElementsCache>({
-        letters: null,
-        letterHeight: 0,
-        timeline: null
-    });
-
-    // Skip animation in dev mode immediately
-    useEffect(() => {
-        if (devMode && isBrowser) {
-            setAnimationState('complete');
-            onAnimationComplete();
+    // Main animation using useGSAP
+    useGSAP(() => {
+        if (!isBrowser || devMode) {
+            if (devMode) {
+                setAnimationState('complete');
+                onAnimationComplete();
+            }
+            return;
         }
-    }, [devMode, onAnimationComplete]);
-
-    // Initial setup and main animation sequence
-    useEffect(() => {
-        if (!isBrowser || devMode || animationState !== 'initial') return;
-
-        // Cleanup function to kill any GSAP animations on unmount
-        const cleanupGSAP = () => {
-            // Get all elements that might have will-change applied
-            const allElements: (Element | null)[] = [
-                introTextRef.current,
-                progressNumberStartRef.current,
-                progressNumberEndRef.current,
-                progressLineRef.current,
-                bgStrip1Ref.current,
-                bgStrip2Ref.current,
-                bgStrip3Ref.current,
-                svgRef.current
-            ];
-
-            // Add letters to the array - now type-safe
-            const letters = elementsCache.current.letters ?? [];
-            if (letters.length > 0) {
-                allElements.push(...letters);
-            }
-
-            // Filter out null values for GSAP operations
-            const validElements = allElements.filter((el): el is Element => el !== null);
-
-            // Clean will-change and kill animations
-            gsap.set(validElements, { willChange: "auto" });
-            gsap.killTweensOf(validElements);
-
-            // Kill timeline
-            if (elementsCache.current.timeline) {
-                elementsCache.current.timeline.kill();
-            }
-        };
 
         // Wait for all refs to be populated before proceeding
         const waitForRefs = () => {
             return new Promise<void>((resolve) => {
                 const checkRefs = () => {
                     if (svgRef.current && containerRef.current) {
-                        // Check if the letter elements are available
                         const letters = svgRef.current.querySelectorAll('.letter');
                         if (letters && letters.length > 0) {
                             resolve();
                             return;
                         }
                     }
-
-                    // If not ready yet, check again in the next frame
                     requestAnimationFrame(checkRefs);
                 };
-
                 checkRefs();
             });
         };
 
-        // Set up animation once refs are available
-        const setupAnimation = async () => {
+        const runAnimation = async () => {
             try {
                 await waitForRefs();
 
                 if (!svgRef.current) return;
 
                 const letters = svgRef.current.querySelectorAll('.letter');
+                const letterHeight = letters[0]?.getBoundingClientRect().height || 0;
 
-                // Cache elements for future use - Convert NodeList to Array
-                elementsCache.current.letters = Array.from(letters);
-                elementsCache.current.letterHeight = letters[0]?.getBoundingClientRect().height || 0;
-
-                // Initial setup of elements - NOT setting will-change yet (only during animation)
-                gsap.set(letters, {
-                    y: 50,
-                    opacity: 0
-                });
-
-                if (svgRef.current) {
-                    svgRef.current.style.opacity = "1";
-                }
-
+                // Initial setup
+                gsap.set(letters, { y: 50, opacity: 0 });
+                gsap.set(svgRef.current, { opacity: 1 });
+                
                 if (introTextRef.current) {
-                    gsap.set(introTextRef.current, {
-                        y: 50,
-                        opacity: 0
-                    });
+                    gsap.set(introTextRef.current, { y: 50, opacity: 0 });
                     introTextRef.current.style.opacity = "1";
                 }
 
                 if (progressLineRef.current) {
-                    // OPTIMIZED: Set full width but scale to 0 for hardware acceleration
                     gsap.set(progressLineRef.current, {
                         width: "100%",
                         scaleX: 0,
@@ -153,137 +87,81 @@ export default function EntranceAnimation({
                     });
                 }
 
-                // Advance to 'ready' state
-                setAnimationState('ready');
+                setAnimationState('animating');
+
+                // Create main timeline
+                const tl = gsap.timeline({
+                    onComplete: () => handleExitAnimation(letters, letterHeight)
+                });
+
+                // 1. Animate logo letters
+                tl.to(letters, {
+                    y: 0,
+                    opacity: 1,
+                    duration: 0.3,
+                    ease: "power2.out",
+                    stagger: {
+                        amount: 0.3,
+                        from: "start",
+                        ease: "none"
+                    }
+                }, 0);
+
+                // 2. Animate intro text
+                if (introTextRef.current) {
+                    tl.to(introTextRef.current, {
+                        y: 0,
+                        opacity: 1,
+                        duration: 0.5,
+                        ease: "power2.out"
+                    }, "<0.1");
+                }
+
+                // 3. Animate progress numbers
+                const progressNumbers = [
+                    progressNumberStartRef.current,
+                    progressNumberEndRef.current
+                ].filter(Boolean);
+                
+                if (progressNumbers.length > 0) {
+                    tl.to(progressNumbers, {
+                        opacity: 1,
+                        duration: 0.5,
+                        ease: "power2.out"
+                    }, "<0.1");
+                }
+
+                // 4. Animate progress bar
+                const progressDuration = 0.5;
+                if (progressLineRef.current) {
+                    tl.to(progressLineRef.current, {
+                        scaleX: 1,
+                        duration: progressDuration,
+                        ease: "power2.out",
+                        onUpdate: function() {
+                            const newProgress = Math.floor(this.progress() * 100);
+                            if (newProgress % 5 === 0 || newProgress === 100) {
+                                setProgress(newProgress);
+                            }
+                        }
+                    }, "<");
+                }
+
+                // 5. Wait before exit
+                tl.to({}, {
+                    duration: 0.3
+                }, `>+${progressDuration * 0.7}`);
 
             } catch (error) {
                 console.error("Error during animation setup:", error);
             }
         };
 
-        setupAnimation();
+        runAnimation();
+    }, { scope: containerRef }); // useGSAP scope para cleanup automático
 
-        // Cleanup on unmount
-        return cleanupGSAP;
-
-    }, [animationState, devMode]);
-
-    // Effect that handles the complete animation sequence based on state
-    useEffect(() => {
-        if (!isBrowser || devMode || animationState !== 'ready') return;
-
-        // Start animation sequence
-        setAnimationState('animating');
-
-        // Create a main timeline
-        const timeline = gsap.timeline({
-            paused: true,
-            smoothChildTiming: true,
-            onComplete: () => {
-                // Clear the timeline reference when complete
-                elementsCache.current.timeline = null;
-            }
-        });
-
-        // Store the timeline in the cache for later reference
-        elementsCache.current.timeline = timeline;
-
-        // 1. Animate logo letters
-        const letters = elementsCache.current.letters ?? [];
-        if (letters.length > 0) {
-            // Apply will-change only during animation for better performance
-            gsap.set(letters, { willChange: "transform, opacity" });
-
-            timeline.to(letters, {
-                y: 0,
-                opacity: 1,
-                duration: 0.3,
-                ease: "power2.out",
-                stagger: {
-                    amount: 0.3,
-                    from: "start",
-                    ease: "none"
-                },
-                onComplete: function () {
-                    // Clean will-change after animation completes
-                    gsap.set(letters, { willChange: "auto" });
-                }
-            }, 0); // Start at the beginning of the timeline
-        }
-
-        // 2. Animate intro text (only if it exists)
-        if (introTextRef.current) {
-            gsap.set(introTextRef.current, { willChange: "transform, opacity" });
-
-            timeline.to(introTextRef.current, {
-                y: 0,
-                opacity: 1,
-                duration: 0.5,
-                ease: "power2.out",
-                onComplete: function () {
-                    if (introTextRef.current) {
-                        gsap.set(introTextRef.current, { willChange: "auto" });
-                    }
-                }
-            }, "<0.1"); // Start 0.1s after the previous animation begins
-        }
-
-        // 3. Animate progress numbers (only if they exist)
-        const progressNumbers = [
-            progressNumberStartRef.current,
-            progressNumberEndRef.current
-        ].filter((el): el is HTMLSpanElement => el !== null); // Type guard for filtering        
-        if (progressNumbers.length > 0) {
-            gsap.set(progressNumbers, { willChange: "opacity" });
-
-            timeline.to(progressNumbers, {
-                opacity: 1,
-                duration: 0.5,
-                ease: "power2.out",
-                onComplete: function () {
-                    gsap.set(progressNumbers, { willChange: "auto" });
-                }
-            }, "<0.1"); // Start 0.1s after the previous animation begins
-        }
-
-        // 4. OPTIMIZED: Animate progress bar using scaleX instead of width for hardware acceleration
-        const progressDuration = 0.5; // 0.5 seconds
-        if (progressLineRef.current) {
-            gsap.set(progressLineRef.current, { willChange: "transform" });
-
-            timeline.to(progressLineRef.current, {
-                scaleX: 1, // Hardware accelerated transform instead of width
-                duration: progressDuration,
-                ease: "power2.out",
-                onUpdate: function () {
-                    // Only update the state when values change significantly (less React re-renders)
-                    const newProgress = Math.floor(this.progress() * 100);
-                    if (newProgress % 5 === 0 || newProgress === 100) { // Update every 5% or at completion
-                        setProgress(newProgress);
-                    }
-                },
-                onComplete: function () {
-                    if (progressLineRef.current) {
-                        gsap.set(progressLineRef.current, { willChange: "auto" });
-                    }
-                }
-            }, "<"); // Start at the same time as the previous animation
-        }
-
-        // 5. Wait and then initiate exit
-        timeline.to({}, {
-            duration: 0.3, // Time visible before exit
-            onComplete: handleExitAnimation
-        }, `>+${progressDuration * 0.7}`); // Start after the previous animation has progressed 70%
-
-        // Start the timeline
-        timeline.play();
-
-    }, [animationState, devMode]);
-
-    // Function to handle the entire exit animation sequence
-    const handleExitAnimation = () => {
-        // Check that elements exist before animating
+    // Function to handle the exit animation
+    const handleExitAnimation = (letters: NodeListOf<Element>, letterHeight: number) => {
         if (!containerRef.current) {
             console.warn("Container reference is null, can't execute exit animation");
             setAnimationState('complete');
@@ -291,59 +169,32 @@ export default function EntranceAnimation({
             return;
         }
 
-        // Get all elements that will be animated
-        const letters = elementsCache.current.letters ?? [];
         const progressNumbers = [
             progressNumberStartRef.current,
             progressNumberEndRef.current
-        ].filter((el): el is HTMLSpanElement => el !== null); // Type guard for filtering
+        ].filter(Boolean);
 
-        const allAnimatingElements: (Element | null)[] = [
-            introTextRef.current,
-            progressLineRef.current,
-            bgStrip1Ref.current,
-            bgStrip2Ref.current,
-            bgStrip3Ref.current,
-            ...progressNumbers,
-            ...letters
-        ];
-
-        // Filter out null values for GSAP operations
-        const animatingElements = allAnimatingElements.filter((el): el is Element => el !== null);
-
-        // Apply will-change only to animating elements
-        gsap.set(animatingElements, { willChange: "transform, opacity" });
-
-        // Create a timeline for exit animations with force3D for better performance
-        const timeline = gsap.timeline({
+        // Create exit timeline
+        const tl = gsap.timeline({
             defaults: {
-                overwrite: "auto", // Ensure animations don't conflict
-                force3D: true // Force 3D transforms for better GPU acceleration
+                overwrite: "auto",
+                force3D: true
             },
             onComplete: () => {
-                // Clean will-change from all animated elements
-                gsap.set(animatingElements, { willChange: "auto" });
-
-                // Change to complete state and hide container
                 if (containerRef.current) {
-                    // Ensure everything is hidden and won't be visible again
                     gsap.set(containerRef.current, {
                         visibility: 'hidden',
                         display: 'none'
                     });
                 }
-
-                // Set state to complete
                 setAnimationState('complete');
-
-                // Notify parent component that animation is complete
                 onAnimationComplete();
             }
         });
 
-        // 1. Animate exit of intro text (only if it exists)
+        // Exit animations
         if (introTextRef.current) {
-            timeline.to(introTextRef.current, {
+            tl.to(introTextRef.current, {
                 y: -50,
                 opacity: 0,
                 duration: 0.4,
@@ -351,30 +202,25 @@ export default function EntranceAnimation({
             });
         }
 
-        // 2. Animate exit of progress numbers (only if they exist)
         if (progressNumbers.length > 0) {
-            timeline.to(progressNumbers, {
+            tl.to(progressNumbers, {
                 opacity: 0,
                 duration: 0.3,
                 ease: "power2.in"
-            }, "<"); // At the same time as the previous animation
+            }, "<");
         }
 
-        // 3. OPTIMIZED: Animate exit of progress bar using scaleX for hardware acceleration
         if (progressLineRef.current) {
-            timeline.to(progressLineRef.current, {
+            tl.to(progressLineRef.current, {
                 scaleX: 0,
                 transformOrigin: "right center",
                 duration: 0.5,
                 ease: "power2.in"
-            }, "<"); // At the same time as the previous animation
+            }, "<");
         }
 
-        // 4. Animate exit of logo letters (only if they exist)
-        const letterHeight = elementsCache.current.letterHeight;
-
         if (letters.length > 0) {
-            timeline.to(letters, {
+            tl.to(letters, {
                 y: -letterHeight * 1.2,
                 opacity: 0,
                 duration: 0.3,
@@ -384,33 +230,20 @@ export default function EntranceAnimation({
                     from: "end",
                     ease: "none"
                 }
-            }, "<0.1"); // Start 0.1s after the beginning of the previous animations
+            }, "<0.1");
         }
 
-        // 5. Animate exit of background strips (upward movement) - using yPercent for hardware acceleration
-        if (bgStrip1Ref.current) {
-            timeline.to(bgStrip1Ref.current, {
-                yPercent: -100,
-                duration: 0.3,
-                ease: "power2.inOut"
-            }, "-=0.1");
-        }
-
-        if (bgStrip2Ref.current) {
-            timeline.to(bgStrip2Ref.current, {
-                yPercent: -100,
-                duration: 0.3,
-                ease: "power2.inOut"
-            }, "-=0.2");
-        }
-
-        if (bgStrip3Ref.current) {
-            timeline.to(bgStrip3Ref.current, {
-                yPercent: -100,
-                duration: 0.3,
-                ease: "power2.inOut"
-            }, "-=0.2");
-        }
+        // Background strips exit
+        const strips = [bgStrip1Ref.current, bgStrip2Ref.current, bgStrip3Ref.current].filter(Boolean);
+        strips.forEach((strip, index) => {
+            if (strip) {
+                tl.to(strip, {
+                    yPercent: -100,
+                    duration: 0.3,
+                    ease: "power2.inOut"
+                }, index === 0 ? "-=0.1" : "-=0.2");
+            }
+        });
     };
 
     // Don't render if animation is complete
@@ -420,36 +253,35 @@ export default function EntranceAnimation({
         <div
             ref={containerRef}
             className="fixed inset-0 z-50 flex flex-col justify-between overflow-hidden"
-
         >
-            {/* Background strip 1 (left) - Fixed positioning to prevent gaps */}
+            {/* Background strip 1 (left) */}
             <div
                 ref={bgStrip1Ref}
                 className="absolute top-0 left-0 h-full"
                 style={{
                     backgroundColor: 'var(--entrance-bg-color, #FF5642)',
-                    width: 'calc(33.333% + 1px)' // Slightly overlap to prevent gaps
+                    width: 'calc(33.333% + 1px)'
                 }}
             />
 
-            {/* Background strip 2 (center) - Fixed positioning to prevent gaps */}
+            {/* Background strip 2 (center) */}
             <div
                 ref={bgStrip2Ref}
                 className="absolute top-0 h-full"
                 style={{
                     backgroundColor: 'var(--entrance-bg-color, #FF5642)',
-                    left: 'calc(33.333% - 1px)', // Start slightly overlapping strip 1
-                    width: 'calc(33.334% + 2px)' // Overlap both sides to prevent gaps
+                    left: 'calc(33.333% - 1px)',
+                    width: 'calc(33.334% + 2px)'
                 }}
             />
 
-            {/* Background strip 3 (right) - Fixed positioning to prevent gaps */}
+            {/* Background strip 3 (right) */}
             <div
                 ref={bgStrip3Ref}
                 className="absolute top-0 right-0 h-full"
                 style={{
                     backgroundColor: 'var(--entrance-bg-color, #FF5642)',
-                    width: 'calc(33.333% + 1px)' // Slightly overlap to prevent gaps
+                    width: 'calc(33.333% + 1px)'
                 }}
             />
 
@@ -459,8 +291,8 @@ export default function EntranceAnimation({
                         ref={introTextRef}
                         className="text-dark font-archivo text-sm inline-block"
                         style={{
-                            opacity: 0, // Initially invisible
-                            transition: 'opacity 0.1s ease-in-out' // Smooth transition
+                            opacity: 0,
+                            transition: 'opacity 0.1s ease-in-out'
                         }}
                     >
                         [INTRO]
@@ -480,15 +312,13 @@ export default function EntranceAnimation({
                         000
                     </span>
 
-                    {/* Loading bar container - Responsive width */}
                     <div className="relative mx-2 w-32 sm:w-64 h-px">
-                        {/* OPTIMIZED: Progress line using scaleX instead of width */}
                         <div
                             ref={progressLineRef}
                             className="absolute h-[1.5px] bg-dark"
                             style={{
-                                width: "100%", // Always full width
-                                transform: `scaleX(${progress / 100})`, // Visual feedback via React state
+                                width: "100%",
+                                transform: `scaleX(${progress / 100})`,
                                 transformOrigin: "left center"
                             }}
                         ></div>
@@ -506,7 +336,6 @@ export default function EntranceAnimation({
                 {/* Logo container */}
                 <div className="flex justify-end w-full">
                     <div className="relative overflow-hidden">
-                        {/* SVG Logo with responsive sizing */}
                         <svg
                             ref={svgRef}
                             xmlns="http://www.w3.org/2000/svg"
@@ -555,7 +384,6 @@ export default function EntranceAnimation({
                                     d="M84.93 4.4h-4.1v1.82c-.46-.4-.96-.77-1.52-1.07-1.36-.74-2.82-1.12-4.4-1.12s-3.04.37-4.4 1.12a8.562 8.562 0 0 0-3.25 3.1c-.81 1.32-1.22 2.82-1.22 4.48s.41 3.16 1.22 4.48a8.638 8.638 0 0 0 3.25 3.1c1.35.74 2.82 1.12 4.4 1.12s3.04-.37 4.4-1.12a8.634 8.634 0 0 0 3.25-3.1c.81-1.32 1.22-2.82 1.22-4.48s-.41-3.16-1.22-4.48c-.14-.23-.3-.44-.46-.65h2.83V4.4Zm-5.38 11.11a5.248 5.248 0 0 1-4.63 2.69c-.98 0-1.91-.24-2.73-.72a5.075 5.075 0 0 1-1.93-1.97c-.47-.83-.7-1.76-.7-2.78s.23-1.95.7-2.78c.47-.83 1.11-1.49 1.93-1.97.82-.48 1.73-.72 2.73-.72s1.88.24 2.7.72c.82.48 1.47 1.13 1.93 1.97.47.83.7 1.76.7 2.78s-.23 1.95-.7 2.78Z"
                                     fill="currentColor"
                                 />
-                                {/* Tail of the g */}
                                 <path
                                     d="M74.92 26.75v3.53c4.89 0 8.86-3.97 8.86-8.86h-3.53c0 2.94-2.39 5.33-5.33 5.33Z"
                                     fill="currentColor"
