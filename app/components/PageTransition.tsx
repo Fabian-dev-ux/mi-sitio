@@ -1,7 +1,8 @@
 'use client'
-import { useEffect, useRef } from 'react'
+import { useRef } from 'react'
 import { usePathname } from 'next/navigation'
-import { gsap, ScrollTrigger } from "@/lib/gsapInit"
+import { gsap } from "@/lib/gsapInit"
+import { useGSAP } from "@gsap/react"
 
 interface PageTransitionProps {
   children: React.ReactNode;
@@ -18,7 +19,7 @@ export default function PageTransition({ children, isReady = true }: PageTransit
   const prevPathnameRef = useRef(pathname)
   const hasInitializedRef = useRef(false)
 
-  useEffect(() => {
+  useGSAP(() => {
     const container = containerRef.current
     const curtain1 = curtain1Ref.current
     const curtain2 = curtain2Ref.current
@@ -125,10 +126,8 @@ export default function PageTransition({ children, isReady = true }: PageTransit
     // Actualizar las referencias
     prevPathnameRef.current = pathname
 
-    return () => {
-      tl.kill()
-    }
-  }, [pathname, isReady])
+    // useGSAP automáticamente limpia las animaciones cuando se desmonta
+  }, [pathname, isReady]) // Dependencias para que se ejecute cuando cambien
 
   return (
     <>
