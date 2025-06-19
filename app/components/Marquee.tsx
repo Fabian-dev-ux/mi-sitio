@@ -1,6 +1,6 @@
 'use client'
 import { useRef, useEffect, useState } from 'react'
-import gsap from 'gsap'
+import { gsap } from "@/lib/gsapInit"
 
 export default function InfiniteConveyorText() {
   const scrollContainer = useRef<HTMLDivElement>(null)
