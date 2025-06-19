@@ -1,7 +1,13 @@
 'use client';
 import React, { useEffect, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import Encabezado from './Encabezado';
-import Fragmento from './Fragmento';
+
+// Dynamic import del componente Fragmento con loading mejorado
+const Fragmento = dynamic(() => import('./Fragmento'), {
+  loading: () => null, // Sin loading placeholder aquí
+  ssr: false // Importante: Three.js requiere APIs del navegador
+});
 
 interface Etapa {
   numero: string;
@@ -23,6 +29,10 @@ const ProcesoSectionSticky: React.FC = () => {
   const [isMobile, setIsMobile] = useState<boolean>(false);
   const [currentSlide, setCurrentSlide] = useState<number>(0);
   const [isTransitioning, setIsTransitioning] = useState<boolean>(false);
+  
+  // Estados para controlar el modelo 3D
+  const [should3DLoad, setShould3DLoad] = useState<boolean>(false);
+  const [is3DLoaded, setIs3DLoaded] = useState<boolean>(false);
 
   const etapas: Etapa[] = [
     {
@@ -73,6 +83,30 @@ const ProcesoSectionSticky: React.FC = () => {
     
     return () => window.removeEventListener('resize', checkIsMobile);
   }, []);
+
+  // Efecto para inicializar la carga del modelo 3D
+  useEffect(() => {
+    if (!isMobile) {
+      // Pequeño delay para cargar el modelo 3D
+      const timer = setTimeout(() => {
+        setShould3DLoad(true);
+      }, 800);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isMobile]);
+
+  // Simular el evento de carga del modelo 3D
+  useEffect(() => {
+    if (should3DLoad && !isMobile) {
+      // Simular tiempo de carga del modelo 3D
+      const loadTimer = setTimeout(() => {
+        setIs3DLoaded(true);
+      }, 1500);
+      
+      return () => clearTimeout(loadTimer);
+    }
+  }, [should3DLoad, isMobile]);
 
   // Inicializar en el primer slide real
   useEffect(() => {
@@ -435,9 +469,22 @@ const ProcesoSectionSticky: React.FC = () => {
             }}
           >
             
-            {/* FONDO 3D - FRAGMENTO */}
+            {/* FONDO 3D - FRAGMENTO CON MANEJO DE ESTADOS */}
             <div className="absolute top-1/2 left-[50px] w-[500px] h-[500px] -translate-y-1/2 z-[1] pointer-events-none opacity-40">
-              <Fragmento />
+              {!should3DLoad ? (
+                // Estado inicial - sin placeholder visible
+                <div className="w-full h-full" />
+              ) : !is3DLoaded ? (
+                // Loading placeholder mientras carga el modelo
+                <div className="w-full h-full bg-gray-900/10 animate-pulse rounded-lg flex items-center justify-center">
+                  <div className="text-gray-600 text-sm opacity-50">Cargando modelo 3D...</div>
+                </div>
+              ) : (
+                // Modelo 3D cargado
+                <div className="w-full h-full">
+                  <Fragmento />
+                </div>
+              )}
             </div>
             
             {/* Contenedor de cards */}
