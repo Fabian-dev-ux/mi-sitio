@@ -35,6 +35,14 @@ interface CircleConfig {
   direction: number;
 }
 
+// Utility function to detect mobile devices
+const isMobileDevice = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+         window.innerWidth < 768;
+};
+
 // Componente de flecha con rotación en hover
 const RotatingArrow: React.FC<RotatingArrowProps> = ({ isHovering }) => {
   return (
@@ -122,6 +130,7 @@ const CircularRotatingText: React.FC<CircularRotatingTextProps> = ({
   href = "/contacto"     // URL destino al hacer clic
 }) => {
   const [isHovering, setIsHovering] = useState<boolean>(false);
+  const [isMobile, setIsMobile] = useState<boolean>(false);
   const speed = useRef<number>(baseSpeed);
   const isScrolling = useRef<boolean>(false);
   const isAnimating = useRef<boolean>(true);
@@ -149,26 +158,30 @@ const CircularRotatingText: React.FC<CircularRotatingTextProps> = ({
 
   // Función para animar los elementos de texto
   const animate = useCallback((): void => {
-    // Si no estamos activamente haciendo scroll, reducir la velocidad
-    if (!isScrolling.current) {
-      speed.current = speed.current * 0.9;
-      
-      // Si la velocidad cae por debajo del valor mínimo, resetear
-      if (Math.abs(speed.current) < minSpeed) {
-        speed.current = minSpeed * defaultDirectionRef.current;
+    // En mobile, mantener velocidad constante sin efectos de scroll
+    if (isMobile) {
+      // Velocidad constante para móvil
+      speed.current = minSpeed * defaultDirectionRef.current;
+    } else {
+      // Lógica original para desktop
+      if (!isScrolling.current) {
+        speed.current = speed.current * 0.9;
+        
+        if (Math.abs(speed.current) < minSpeed) {
+          speed.current = minSpeed * defaultDirectionRef.current;
+        }
       }
+      
+      isScrolling.current = false;
     }
-    
-    // Reset flag de scroll para el próximo frame
-    isScrolling.current = false;
 
     // Actualizar la rotación de cada texto basado en su dirección
     textRefs.forEach(ref => {
       if (ref.current) {
         const direction = parseInt(ref.current.getAttribute('data-direction') || '1');
         
-        // Factor de velocidad basado en si estamos haciendo scroll o no
-        const speedFactor = Math.abs(speed.current) > minSpeed ? 1.0 : 0.2;
+        // En mobile, usar velocidad constante. En desktop, usar lógica original
+        const speedFactor = isMobile ? 0.3 : (Math.abs(speed.current) > minSpeed ? 1.0 : 0.2);
         
         // Usar GSAP para la animación suave
         gsap.to(ref.current, {
@@ -182,7 +195,21 @@ const CircularRotatingText: React.FC<CircularRotatingTextProps> = ({
 
     // Continuar la animación
     animationRef.current = requestAnimationFrame(animate);
-  }, [minSpeed]);
+  }, [minSpeed, isMobile]);
+
+  // Detectar si es mobile al montar el componente
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(isMobileDevice());
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+    };
+  }, []);
 
   useEffect(() => {
     // Verificar que GSAP esté disponible
@@ -201,44 +228,54 @@ const CircularRotatingText: React.FC<CircularRotatingTextProps> = ({
     // Iniciar la animación inmediatamente
     animationRef.current = requestAnimationFrame(animate);
 
-    // Tiempo límite para agrupar eventos de scroll
-    let scrollTimeout: NodeJS.Timeout;
+    // Solo agregar event listeners de scroll si NO es mobile
+    if (!isMobile) {
+      // Tiempo límite para agrupar eventos de scroll
+      let scrollTimeout: NodeJS.Timeout;
 
-    // Manejador de eventos de scroll
-    const handleWheel = (e: WheelEvent): void => {
-      // Marcar que estamos haciendo scroll activamente
-      isScrolling.current = true;
-      
-      // Limpiar timeout existente
-      clearTimeout(scrollTimeout);
-      
-      // Establecer nuevo timeout
-      scrollTimeout = setTimeout(() => {
-        isScrolling.current = false;
-      }, 150);
-      
-      // Calcula la velocidad basada en el scroll
-      const newSpeed = e.deltaY * scrollSensitivity;
-      
-      // Actualizar la dirección por defecto según la última dirección de scroll
-      defaultDirectionRef.current = e.deltaY > 0 ? 1 : -1;
+      // Manejador de eventos de scroll
+      const handleWheel = (e: WheelEvent): void => {
+        // Marcar que estamos haciendo scroll activamente
+        isScrolling.current = true;
+        
+        // Limpiar timeout existente
+        clearTimeout(scrollTimeout);
+        
+        // Establecer nuevo timeout
+        scrollTimeout = setTimeout(() => {
+          isScrolling.current = false;
+        }, 150);
+        
+        // Calcula la velocidad basada en el scroll
+        const newSpeed = e.deltaY * scrollSensitivity;
+        
+        // Actualizar la dirección por defecto según la última dirección de scroll
+        defaultDirectionRef.current = e.deltaY > 0 ? 1 : -1;
 
-      // Limitar la velocidad máxima para evitar rotaciones muy rápidas
-      speed.current = Math.max(Math.min(newSpeed, maxSpeed), -maxSpeed);
-    };
+        // Limitar la velocidad máxima para evitar rotaciones muy rápidas
+        speed.current = Math.max(Math.min(newSpeed, maxSpeed), -maxSpeed);
+      };
 
-    // Agregar el event listener
-    window.addEventListener('wheel', handleWheel, { passive: true });
+      // Agregar el event listener solo para desktop
+      window.addEventListener('wheel', handleWheel, { passive: true });
 
-    // Limpieza
-    return () => {
-      window.removeEventListener('wheel', handleWheel);
-      clearTimeout(scrollTimeout);
-      if (animationRef.current !== null) {
-        cancelAnimationFrame(animationRef.current);
-      }
-    };
-  }, [animate, maxSpeed, scrollSensitivity]);
+      // Limpieza
+      return () => {
+        window.removeEventListener('wheel', handleWheel);
+        clearTimeout(scrollTimeout);
+        if (animationRef.current !== null) {
+          cancelAnimationFrame(animationRef.current);
+        }
+      };
+    } else {
+      // Limpieza solo para animación en mobile
+      return () => {
+        if (animationRef.current !== null) {
+          cancelAnimationFrame(animationRef.current);
+        }
+      };
+    }
+  }, [animate, maxSpeed, scrollSensitivity, isMobile]);
 
   // Efecto para manejar el hover del círculo central
   useEffect(() => {
