@@ -256,6 +256,12 @@ const Hero = () => {
 
   return (
     <section className={`${heroHeightClasses} ${heroSpacingClasses} bg-dark text-gray-400 relative overflow-hidden px-4 md:px-6 lg:px-8 xl:px-10 2xl:px-20`}>
+      
+      {/* H1 oculto visualmente pero accesible para SEO y lectores de pantalla */}
+      <h1 className="sr-only">
+        Convertimos Ideas Locas en Experiencias Digitales Memorables
+      </h1>
+
       {/* HeroBackground with 3D animation */}
       <div className="absolute inset-0 z-0">
         <HeroBackground />
@@ -303,9 +309,9 @@ const Hero = () => {
 
               {/* Studio description - MODIFIED: Changed column span to 2-6 for md breakpoint */}
               <div className="col-span-12 md:col-start-2 md:col-span-5 lg:col-start-7 lg:col-span-3">
-                <p className={`text-gray-600 text-base font-archivo text-left max-w-[320px] md:max-w-[450px] ${isTablet ? 'lg:text-sm' : ''}`}>
+                <h2 className={`text-gray-600 text-base font-archivo text-left max-w-[320px] md:max-w-[450px] ${isTablet ? 'lg:text-sm' : ''}`}>
                   Convertimos ideas locas en experiencias digitales memorables. Diseñamos webs que rompen esquemas, marcas con personalidad y contenido que conecta.
-                </p>
+                </h2>
 
                 {/* Mobile-only CTA */}
                 <div className="block md:hidden mt-8 overflow-hidden">
