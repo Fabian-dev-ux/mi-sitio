@@ -4,9 +4,29 @@ import React, { useState, useRef, useEffect } from "react";
 import { useGSAP } from "@gsap/react";
 import { gsap, ScrollTrigger } from "@/lib/gsapInit";
 import Link from "next/link";
-import ArrowAni from "./ArrowAni";
+import dynamic from "next/dynamic";
 import SlideTextOnHover from "./SlideTextOnHover";
 import emailjs from '@emailjs/browser';
+
+// Importación dinámica optimizada del componente ArrowAni
+const ArrowAni = dynamic(() => import("./ArrowAni"), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-full flex items-center justify-center bg-gray-900/10 rounded-lg">
+      <div className="animate-pulse flex flex-col items-center">
+        {/* Placeholder más elaborado que simula la flecha 3D */}
+        <div className="relative">
+          <div className="w-20 h-20 border-2 border-gray-600 rounded-full flex items-center justify-center mb-2">
+            <div className="w-10 h-10 bg-gradient-to-br from-gray-600 to-gray-700 rounded-full opacity-60 animate-pulse"></div>
+          </div>
+          <div className="absolute -top-1 -right-1 w-6 h-6 bg-gray-600 rounded-full opacity-40"></div>
+          <div className="absolute -bottom-1 -left-1 w-4 h-4 bg-gray-700 rounded-full opacity-30"></div>
+        </div>
+        <div className="text-xs text-gray-600 animate-pulse">Cargando modelo 3D...</div>
+      </div>
+    </div>
+  )
+});
 
 const ContactoForm: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -26,11 +46,17 @@ const ContactoForm: React.FC = () => {
   // Estado para validación de teléfono
   const [phoneError, setPhoneError] = useState('');
 
+  // Estados para controlar cuándo cargar ArrowAni
+  const [shouldLoadArrow, setShouldLoadArrow] = useState(false);
+  const [isArrowVisible, setIsArrowVisible] = useState(false);
+
   const titleContainerRef = useRef<HTMLDivElement>(null);
   const formContainerRef = useRef<HTMLDivElement>(null);
   const leftColumnRef = useRef<HTMLDivElement>(null);
   const rightColumnRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const arrowContainerRef = useRef<HTMLDivElement>(null);
+  
   const titleText = "Convirtamos tus ideas en algo que nadie pueda ignorar";
 
   // Opciones de intereses actualizadas
@@ -46,23 +72,50 @@ const ContactoForm: React.FC = () => {
     "Social Media Ads"
   ];
 
+  // Implementación mejorada del lazy loading con Intersection Observer
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          console.log('🎯 ArrowAni container is visible, starting load...');
+          setIsArrowVisible(true);
+          
+          // Delay adicional para asegurar que el layout esté estable
+          setTimeout(() => {
+            setShouldLoadArrow(true);
+            console.log('✅ ArrowAni should load now');
+          }, 150);
+          
+          observer.disconnect();
+        }
+      },
+      { 
+        threshold: 0.1,
+        rootMargin: '50px'
+      }
+    );
+
+    if (arrowContainerRef.current) {
+      observer.observe(arrowContainerRef.current);
+      console.log('👁️ Observer attached to arrow container');
+    }
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
   // Función para validar número de teléfono
   const isValidPhone = (phone: string): boolean => {
-    // Remover espacios, guiones y paréntesis para validación
     const cleanPhone = phone.replace(/[\s\-\(\)]/g, '');
-    
-    // Verificar que solo contenga números y posiblemente un + al inicio
     const phoneRegex = /^(\+)?[0-9]{7,15}$/;
-    
     return phoneRegex.test(cleanPhone);
   };
 
   // Función para formatear el número de teléfono mientras se escribe
   const formatPhoneNumber = (value: string): string => {
-    // Remover todo excepto números y el signo +
     const cleaned = value.replace(/[^\d+]/g, '');
     
-    // Si empieza con +, mantenerlo
     if (cleaned.startsWith('+')) {
       return '+' + cleaned.substring(1).replace(/[^\d]/g, '');
     }
@@ -70,10 +123,10 @@ const ContactoForm: React.FC = () => {
     return cleaned;
   };
 
-  // Set up animations using useGSAP - Solo mantener animaciones de formulario si las necesitas
+  // Set up animations using useGSAP
   useGSAP(() => {
-    // Eliminadas todas las animaciones de texto y bordes
-    // Solo mantener limpieza de ScrollTriggers si es necesario
+    // Animaciones básicas si las necesitas
+    ScrollTrigger.refresh();
   }, {
     scope: formContainerRef,
     dependencies: [],
@@ -82,35 +135,29 @@ const ContactoForm: React.FC = () => {
 
   // Efecto para manejar la navegación y visibilidad de la página
   useEffect(() => {
-    // Función para reinicializar animaciones
     const reinitializeAnimations = () => {
       ScrollTrigger.refresh();
     };
 
-    // Eventos para detectar cambios de visibilidad
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         reinitializeAnimations();
       }
     };
 
-    // Para manejar navegación Next.js
     const handlePageShow = () => {
       reinitializeAnimations();
     };
 
-    // Registrar eventos
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('pageshow', handlePageShow);
     window.addEventListener('popstate', reinitializeAnimations);
 
     return () => {
-      // Limpiar todos los eventos
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('pageshow', handlePageShow);
       window.removeEventListener('popstate', reinitializeAnimations);
 
-      // Matar todos los ScrollTriggers asociados a este componente
       if (formContainerRef.current) {
         ScrollTrigger.getAll().forEach(trigger => {
           if (trigger.vars.trigger === formContainerRef.current ||
@@ -138,7 +185,6 @@ const ContactoForm: React.FC = () => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     
-    // Manejo especial para el campo de teléfono
     if (name === 'telefono') {
       const formattedValue = formatPhoneNumber(value);
       
@@ -147,7 +193,6 @@ const ContactoForm: React.FC = () => {
         [name]: formattedValue
       });
 
-      // Validar teléfono en tiempo real
       if (formattedValue.length > 0) {
         if (!isValidPhone(formattedValue)) {
           setPhoneError('Ingresa un número de teléfono válido (7-15 dígitos)');
@@ -209,23 +254,19 @@ const ContactoForm: React.FC = () => {
 
       console.log('✅ Validaciones pasadas');
 
-      // ========== PASO 1: ENVIAR FORMULARIO PRINCIPAL (a ti como administrador) ==========
-      console.log('📤 Enviando formulario principal...');
-
       // Preparar los intereses como array y como string
       const interesesArray = formData.intereses.length > 0 ? formData.intereses : [];
       const interesesString = interesesArray.length > 0 ? interesesArray.join(', ') : 'No especificados';
 
-      // CORREGIDO: Preparar datos que coincidan EXACTAMENTE con tu template HTML
+      // Preparar datos para el template del administrador
       const adminTemplateParams = {
         from_name: formData.nombre.trim(),
         from_email: formData.email.trim().toLowerCase(),
         phone: formData.telefono.trim(),
         company: formData.empresa.trim() || 'No especificada',
         message: formData.mensaje.trim() || 'Sin mensaje adicional',
-        interests: interesesString, // Como string para mostrar en el template
-        interests_array: interesesArray, // Como array para los tags (si tu template lo soporta)
-        // Agregar timestamp si tu template lo necesita
+        interests: interesesString,
+        interests_array: interesesArray,
         timestamp: new Date().toLocaleString('es-ES', {
           year: 'numeric',
           month: 'long',
@@ -240,17 +281,14 @@ const ContactoForm: React.FC = () => {
 
       await emailjs.send(
         process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID!,
-        process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID_RECEIVE!, // Template del administrador
+        process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID_RECEIVE!,
         adminTemplateParams,
         process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY!
       );
 
       console.log('✅ Formulario principal enviado correctamente');
 
-      // ========== PASO 2: ENVIAR EMAIL DE CONFIRMACIÓN (al usuario) ==========
-      console.log('📧 Enviando email de confirmación...');
-
-      // Preparar parámetros para el email de confirmación al usuario
+      // Enviar email de confirmación
       const confirmationParams = {
         to_name: formData.nombre.trim(),
         to_email: formData.email.trim().toLowerCase(),
@@ -269,18 +307,16 @@ const ContactoForm: React.FC = () => {
       try {
         await emailjs.send(
           process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID!,
-          process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID_SEND!, // Template de confirmación al usuario
+          process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID_SEND!,
           confirmationParams,
           process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY!
         );
         console.log('✅ Email de confirmación enviado correctamente');
       } catch (confirmationError) {
-        // Si falla la confirmación, solo logueamos el error pero no fallamos todo el proceso
         console.warn('⚠️ Error enviando confirmación:', confirmationError);
-        console.log('✅ Formulario principal enviado, pero falló confirmación al usuario');
       }
 
-      // ÉXITO - Limpiar formulario
+      // Limpiar formulario
       setFormData({
         nombre: "",
         email: "",
@@ -290,9 +326,7 @@ const ContactoForm: React.FC = () => {
         intereses: []
       });
 
-      // Limpiar errores
       setPhoneError('');
-
       setSubmitStatus('success');
       setSubmitMessage('¡Mensaje enviado con éxito! Te contactaremos pronto. También recibirás un email de confirmación por separado.');
 
@@ -319,32 +353,25 @@ const ContactoForm: React.FC = () => {
 
   return (
     <div className="bg-dark text-gray-700 font-archivo pb-6 pt-32 2xl:pt-44 px-4 md:px-6 lg:px-8 xl:px-10 2xl:px-20 w-full flex flex-col justify-end 2xl:h-screen 2xl:min-h-screen" id="contacto-form">
-      {/* Contenedor del grid sin bordes - ajustado para ajustarse a su contenido */}
+      {/* Contenedor del grid sin bordes */}
       <div
         ref={formContainerRef}
         className="w-full mx-auto grid grid-cols-1 lg:grid-cols-2 pb-2 md:pb-6 relative overflow-visible"
       >
-        {/* Right Column - Form - Ahora primero en móvil */}
+        {/* Right Column - Form */}
         <div
           ref={rightColumnRef}
           className="flex flex-col justify-center relative p-6 md:p-10 order-1 lg:order-2"
         >
-          {/* Elementos de borde para la columna derecha - Ahora visibles sin animación */}
+          {/* Elementos de borde para la columna derecha */}
           <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
-            {/* Borde superior - con gap en los extremos */}
             <div className="absolute top-0 left-4 right-4 h-[0.25px] bg-gray-800"></div>
-
-            {/* Borde inferior - con gap en los extremos */}
             <div className="absolute bottom-0 left-4 right-4 h-[0.25px] bg-gray-800"></div>
-
-            {/* Borde izquierdo - con gap en los extremos */}
             <div className="absolute top-4 bottom-4 left-0 w-[0.25px] bg-gray-800"></div>
-
-            {/* Borde derecho - con gap en los extremos */}
             <div className="absolute top-4 bottom-4 right-0 w-[0.25px] bg-gray-800"></div>
           </div>
+          
           <div className="mb-2">
-            {/* Título sin animación */}
             <div
               ref={titleContainerRef}
               className="mb-8 md:mb-12 font-display uppercase text-gray-500 text-3xl md:text-5xl font-semibold leading-none max-w-2xl"
@@ -357,7 +384,7 @@ const ContactoForm: React.FC = () => {
             <p className="mb-3 text-gray-400 text-base font-archivo">Estoy interesado en...</p>
           </div>
 
-          {/* Interest buttons - Flex wrap sin gap horizontal, limitado en 2xl */}
+          {/* Interest buttons */}
           <div className="flex flex-wrap gap-y-2 mb-10 md:mb-16 2xl:max-w-2xl">
             {interestOptions.map((interest, index) => (
               <button
@@ -388,7 +415,6 @@ const ContactoForm: React.FC = () => {
 
           {/* Form container */}
           <div>
-            {/* Formulario principal */}
             <form
               ref={formRef}
               onSubmit={handleSubmit}
@@ -498,32 +524,38 @@ const ContactoForm: React.FC = () => {
           </div>
         </div>
 
-        {/* Left Column - Contact Info - Ahora segundo en móvil */}
+        {/* Left Column - Contact Info */}
         <div
           ref={leftColumnRef}
           className="flex flex-col justify-between lg:justify-start relative p-6 pt-48 md:p-10 order-2 lg:order-1 h-full"
         >
-          {/* Elementos de borde para la columna izquierda - Ahora visibles sin animación */}
+          {/* Elementos de borde para la columna izquierda */}
           <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
-            {/* Borde superior - con gap en los extremos */}
             <div className="absolute top-0 left-4 right-4 h-[0.25px] bg-gray-800"></div>
-
-            {/* Borde inferior - con gap en los extremos */}
             <div className="absolute bottom-0 left-4 right-4 h-[0.25px] bg-gray-800"></div>
-
-            {/* Borde izquierdo - con gap en los extremos */}
             <div className="absolute top-4 bottom-4 left-0 w-[0.25px] bg-gray-800"></div>
-
-            {/* Borde derecho - con gap en los extremos */}
             <div className="absolute top-4 bottom-4 right-0 w-[0.25px] bg-gray-800"></div>
           </div>
 
-          {/* Arrow component */}
-          <div className="block absolute top-1 right-0 lg:bottom-0 lg:right-0 lg:top-auto lg:left-auto w-48 sm:w-64 md:w-96 h-48 sm:h-64 md:h-96">
-            <ArrowAni />
+          {/* Arrow component optimizada con lazy loading */}
+          <div 
+            ref={arrowContainerRef}
+            className="block absolute top-1 right-0 lg:bottom-0 lg:right-0 lg:top-auto lg:left-auto w-48 sm:w-64 md:w-96 h-48 sm:h-64 md:h-96"
+          >
+            {isArrowVisible && (
+              <div className="w-full h-full">
+                {shouldLoadArrow ? (
+                  <ArrowAni />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <div className="text-xs text-gray-600">Preparando modelo 3D...</div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
-          {/* Contenedor de información de contacto - Sin animación */}
+          {/* Contenedor de información de contacto */}
           <div className="space-y-6 md:space-y-8 font-archivo text-gray-400 mt-auto lg:mt-0">
             <div>
               <p className="text-sm uppercase text-gray-600 mb-1">UBICACION</p>
