@@ -7,25 +7,43 @@ const VideoReel = () => {
   const sectionRef = useRef<HTMLElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [initialLoad, setInitialLoad] = useState(true);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     
     const checkIsMobile = () => {
       const mobile = window.innerWidth < 768;
+      const mobileChanged = mobile !== isMobile;
+      
       setIsMobile(mobile);
       
-      // Forzar recarga del video cuando cambia el tamaño
-      if (videoRef.current) {
+      // Solo recargar video si realmente cambió el estado mobile/desktop
+      if (videoRef.current && mobileChanged && !initialLoad) {
         videoRef.current.load();
+      }
+      
+      if (initialLoad) {
+        setInitialLoad(false);
       }
     };
 
     checkIsMobile();
-    window.addEventListener('resize', checkIsMobile);
     
-    return () => window.removeEventListener('resize', checkIsMobile);
-  }, []);
+    // Debounce para evitar múltiples recargas
+    let resizeTimeout: NodeJS.Timeout;
+    const handleResize = () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(checkIsMobile, 300);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      clearTimeout(resizeTimeout);
+    };
+  }, [isMobile, initialLoad]);
 
   // Configuración de GSAP solo para desktop
   useGSAP(() => {
@@ -45,10 +63,18 @@ const VideoReel = () => {
 
   }, { dependencies: [isMobile], scope: sectionRef });
 
-  // Efecto para recargar video cuando cambia isMobile
+  // Efecto para recargar video solo cuando realmente cambia mobile/desktop
   useEffect(() => {
-    if (videoRef.current) {
+    if (videoRef.current && !initialLoad) {
+      const currentTime = videoRef.current.currentTime;
       videoRef.current.load();
+      
+      // Mantener el tiempo de reproducción
+      videoRef.current.addEventListener('loadedmetadata', () => {
+        if (videoRef.current) {
+          videoRef.current.currentTime = currentTime;
+        }
+      }, { once: true });
     }
   }, [isMobile]);
 
@@ -71,11 +97,11 @@ const VideoReel = () => {
           loop
           muted
           playsInline
-          key={isMobile ? 'mobile' : 'desktop'} // Fuerza re-render
           className="absolute inset-0 w-full h-full object-cover"
           style={{
             transformOrigin: "center center",
-            transform: isMobile ? 'none' : undefined // Sin transformaciones en mobile
+            transform: isMobile ? 'none' : undefined, // Sin transformaciones en mobile
+            willChange: isMobile ? 'auto' : 'transform' // Optimización de rendering
           }}
         >
           <source src={videoSources.webm} type="video/webm" />
