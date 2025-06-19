@@ -14,22 +14,28 @@ const Footer = () => {
   const parallaxTargetRef = useRef(null);
 
   useGSAP(() => {
-    // Animación para el efecto Parallax aplicada solo al div específico mx-auto w-full
-    const tl = gsap.timeline({
-      scrollTrigger: {
-        trigger: footerRef.current,
-        start: "top bottom", 
-        end: "bottom top", 
-        scrub: true,
-      },
-    });
+    // Verificar si estamos en mobile (ancho menor a 768px)
+    const isMobile = window.innerWidth < 768;
+    
+    // Solo aplicar parallax si NO estamos en mobile
+    if (!isMobile) {
+      // Animación para el efecto Parallax aplicada solo al div específico mx-auto w-full
+      const tl = gsap.timeline({
+        scrollTrigger: {
+          trigger: footerRef.current,
+          start: "top bottom", 
+          end: "bottom top", 
+          scrub: true,
+        },
+      });
 
-    // Movimiento en el eje Y aplicado sólo al div con classe mx-auto w-full
-    tl.fromTo(
-      parallaxTargetRef.current,
-      { y: "-75%" }, 
-      { y: "75%", ease: "none" }
-    );
+      // Movimiento en el eje Y aplicado sólo al div con classe mx-auto w-full
+      tl.fromTo(
+        parallaxTargetRef.current,
+        { y: "-75%" }, 
+        { y: "75%", ease: "none" }
+      );
+    }
   }, { scope: footerRef }); // Scope para limitar la animación al footer
 
   return (
@@ -63,7 +69,7 @@ const Footer = () => {
             </div>
 
             {/* Left column - Contact */}
-            <div className="md:col-span-3 border-t border-black/30 pt-4 order-2">
+            <div className="md:col-span-3 border-t border-black/30 pt-4 pb-4 order-2">
               <h3 className="text-sm font-normal uppercase font-archivo mb-6 text-gray-900">Contactos</h3>
               <div className="contact-container flex items-start mb-6">
                 {/* Logo - visible only on 2xl and mobile screens (hidden on md, lg, xl) */}
