@@ -9,6 +9,10 @@ export default function InfiniteConveyorText() {
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const [textWidth, setTextWidth] = useState(0)
   
+  // Referencias para touch events
+  const touchStartY = useRef<number>(0)
+  const lastTouchY = useRef<number>(0)
+  
   useEffect(() => {
     if (!scrollContainer.current) return
     
@@ -60,11 +64,8 @@ export default function InfiniteConveyorText() {
       animationRef.current = requestAnimationFrame(animate)
     }
     
-    // Inicia la animación automáticamente
-    animationRef.current = requestAnimationFrame(animate)
-    
-    // Evento de scroll para dar impulso
-    const handleWheel = (e: WheelEvent) => {
+    // Función común para manejar el cambio de velocidad y dirección
+    const handleScrollInput = (deltaY: number) => {
       // Marcar que estamos haciendo scroll activamente
       isScrolling.current = true
       
@@ -80,25 +81,54 @@ export default function InfiniteConveyorText() {
       
       // Calcular nueva velocidad basada en el scroll
       const scrollSensitivity = 1
-      const newSpeed = Math.abs(e.deltaY) * scrollSensitivity
+      const newSpeed = Math.abs(deltaY) * scrollSensitivity
       
       // Usar la mayor velocidad (para respuesta más dinámica)
       speed = Math.max(newSpeed, speed)
       
       // Establecer la dirección basada en el scroll
-      direction = e.deltaY > 0 ? -1 : 1
+      direction = deltaY > 0 ? -1 : 1
       
       // Limitar la velocidad máxima
       const maxSpeed = 20
       if (speed > maxSpeed) speed = maxSpeed
     }
     
-    // Agregar el event listener
-    window.addEventListener('wheel', handleWheel)
+    // Inicia la animación automáticamente
+    animationRef.current = requestAnimationFrame(animate)
+    
+    // Evento de scroll para desktop
+    const handleWheel = (e: WheelEvent) => {
+      handleScrollInput(e.deltaY)
+    }
+    
+    // Eventos touch para móviles
+    const handleTouchStart = (e: TouchEvent) => {
+      touchStartY.current = e.touches[0].clientY
+      lastTouchY.current = e.touches[0].clientY
+    }
+    
+    const handleTouchMove = (e: TouchEvent) => {
+      const currentY = e.touches[0].clientY
+      const deltaY = lastTouchY.current - currentY
+      
+      // Solo procesar si hay un movimiento significativo
+      if (Math.abs(deltaY) > 2) {
+        handleScrollInput(deltaY * 2) // Multiplicamos por 2 para mayor sensibilidad en móvil
+        lastTouchY.current = currentY
+      }
+    }
+    
+    // Agregar event listeners
+    window.addEventListener('wheel', handleWheel, { passive: true })
+    window.addEventListener('touchstart', handleTouchStart, { passive: true })
+    window.addEventListener('touchmove', handleTouchMove, { passive: true })
     
     // Limpieza
     return () => {
       window.removeEventListener('wheel', handleWheel)
+      window.removeEventListener('touchstart', handleTouchStart)
+      window.removeEventListener('touchmove', handleTouchMove)
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current)
       }
