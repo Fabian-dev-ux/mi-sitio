@@ -7,7 +7,8 @@ import {
   Environment,
   useGLTF,
   MeshTransmissionMaterial,
-  Text
+  Text,
+  Preload
 } from '@react-three/drei';
 import { 
   Group, 
@@ -18,8 +19,30 @@ import {
   BufferGeometry,
   Material
 } from 'three';
+import Head from 'next/head';
 
-// Utilidades optimizadas
+// ============= PRECARGAS CRÍTICAS =============
+// Precargar inmediatamente el modelo más crítico
+useGLTF.preload('/models/break.glb');
+
+// Precargar fuentes de forma async
+if (typeof window !== 'undefined') {
+  // Precarga asíncrona de fuentes
+  const preloadFont = (url: string) => {
+    const link = document.createElement('link');
+    link.rel = 'preload';
+    link.href = url;
+    link.as = 'font';
+    link.type = 'font/truetype';
+    link.crossOrigin = '';
+    document.head.appendChild(link);
+  };
+
+  preloadFont('/fonts/ClashDisplay-Semibold.ttf');
+  preloadFont('/fonts/ClashDisplay-Regular.ttf');
+}
+
+// ============= UTILIDADES OPTIMIZADAS =============
 const throttle = (func: Function, limit: number) => {
   let inThrottle: boolean;
   return function(this: any, ...args: any[]) {
@@ -39,7 +62,7 @@ const debounce = (func: Function, wait: number) => {
   };
 };
 
-// Tipos optimizados - FIXED
+// ============= TIPOS =============
 interface BaseMeshConfig {
   positionOffset: [number, number, number];
   scaleMultiplier: [number, number, number];
@@ -66,7 +89,7 @@ interface OptimizedMeshData {
   index: number;
 }
 
-// Hook optimizado para configuraciones
+// ============= HOOKS OPTIMIZADOS =============
 const useMeshConfigs = (): MeshConfig[] => {
   return useMemo<MeshConfig[]>(() => [
     {
@@ -137,13 +160,48 @@ const useMeshConfigs = (): MeshConfig[] => {
   ], []);
 };
 
-// Model component optimizado
+// ============= COMPONENTES =============
+
+// Loader mejorado con menos geometría
+const OptimizedLoader = React.memo(() => (
+  <mesh>
+    <boxGeometry args={[0.5, 0.5, 0.5]} />
+    <meshBasicMaterial color="#FF5741" wireframe />
+  </mesh>
+));
+
+// Componente para manejar las precargas
+const PreloadManager = React.memo(() => {
+  useEffect(() => {
+    // Precarga adicional para recursos de Three.js
+    const preloadResources = async () => {
+      try {
+        // Forzar la carga del modelo si no está cargado
+        await useGLTF.preload('/models/break.glb');
+        
+        // Precarga del environment preset
+        if (window.requestIdleCallback) {
+          window.requestIdleCallback(() => {
+            // Precarga en tiempo idle
+          });
+        }
+      } catch (error) {
+        console.warn('Error precargando recursos:', error);
+      }
+    };
+
+    preloadResources();
+  }, []);
+
+  return null;
+});
+
+// Model component con mejor manejo de errores
 function Model() {
   const gltf = useGLTF('/models/break.glb');
   const groupRef = useRef<Group>(null);
   const materialRef = useRef<any>(null);
   
-  // Estado optimizado con menos re-renders
   const [optimizedMeshData, setOptimizedMeshData] = useState<OptimizedMeshData[]>([]);
   const [initialized, setInitialized] = useState(false);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
@@ -153,7 +211,6 @@ function Model() {
   const isMobile = useMemo(() => size.width < 640, [size.width]);
   const meshConfigs = useMeshConfigs();
 
-  // Pre-cálculos memoizados para evitar cálculos en useFrame
   const animationConstants = useMemo(() => ({
     mouseInfluenceDesktop: 0.15,
     rotationLerpFactor: 0.05,
@@ -164,7 +221,6 @@ function Model() {
     scrollScaleFactor: 1.2
   }), []);
 
-  // Optimización: Callbacks memoizados con dependencias correctas
   const updateMousePosition = useCallback(
     throttle((e: MouseEvent) => {
       if (isMobile) return;
@@ -187,7 +243,6 @@ function Model() {
     [isMobile]
   );
 
-  // Inicialización optimizada con cleanup
   useEffect(() => {
     if (!gltf.scene || !materialRef.current) return;
 
@@ -198,7 +253,6 @@ function Model() {
       if ((child as Mesh).isMesh && meshIndex < meshConfigs.length) {
         const mesh = child as Mesh;
         
-        // Almacenar datos optimizados
         meshDataArray.push({
           mesh,
           originalPosition: mesh.position.clone(),
@@ -216,7 +270,6 @@ function Model() {
     setOptimizedMeshData(meshDataArray);
     setInitialized(true);
 
-    // Cleanup mejorado
     return () => {
       meshDataArray.forEach(data => {
         data.mesh.position.copy(data.originalPosition);
@@ -226,7 +279,6 @@ function Model() {
     };
   }, [gltf.scene, meshConfigs]);
 
-  // Event listeners optimizados
   useEffect(() => {
     if (isMobile) return;
 
@@ -241,7 +293,6 @@ function Model() {
     return cleanup;
   }, [updateMousePosition, updateScrollProgress, isMobile]);
 
-  // Reset optimizado
   useEffect(() => {
     const resetMeshes = () => {
       optimizedMeshData.forEach(data => {
@@ -265,32 +316,27 @@ function Model() {
     };
   }, [optimizedMeshData]);
 
-  // Loop de animación super optimizado - FIXED
   useFrame(() => {
     if (!initialized || optimizedMeshData.length === 0) return;
 
-    // Batch todas las operaciones para reducir reflows
     optimizedMeshData.forEach((data) => {
       const { mesh, originalPosition, originalScale, config, index } = data;
       const activeConfig = isMobile ? config.mobile : config.desktop;
 
-      // Handle visibility properly for mobile/desktop - FIXED
       if (isMobile) {
-        mesh.visible = config.mobile.visible; // Use specific mobile config
+        mesh.visible = config.mobile.visible;
         if (!mesh.visible) return;
       } else {
-        mesh.visible = true; // All meshes visible on desktop
+        mesh.visible = true;
       }
 
       const { rotation: rotConfig } = activeConfig;
 
-      // Rotación automática (siempre)
       mesh.rotation.x += rotConfig.x;
       mesh.rotation.y += rotConfig.y;
       mesh.rotation.z += rotConfig.z;
 
       if (isMobile) {
-        // Mobile: Solo posición y escala fijas
         mesh.position.set(
           originalPosition.x + activeConfig.positionOffset[0],
           originalPosition.y + activeConfig.positionOffset[1],
@@ -303,7 +349,6 @@ function Model() {
           originalScale.z * activeConfig.scaleMultiplier[2]
         );
       } else {
-        // Desktop: Animaciones completas con pre-cálculos
         const uniqueFactor = 0.03 + (index * 0.01);
         const targetRotX = mesh.rotation.x - (mousePosition.y * uniqueFactor);
         const targetRotY = mesh.rotation.y + (mousePosition.x * uniqueFactor);
@@ -311,7 +356,6 @@ function Model() {
         mesh.rotation.x += (targetRotX - mesh.rotation.x) * animationConstants.mouseRotationLerpFactor;
         mesh.rotation.y += (targetRotY - mesh.rotation.y) * animationConstants.mouseRotationLerpFactor;
 
-        // Pre-cálculos de scroll optimizados
         const zOffset = scrollProgress * (animationConstants.scrollZBaseFactor + (index * animationConstants.scrollZIncrementFactor));
         const xDispersion = (index % 2 === 0 ? 1 : -1) * scrollProgress * (index + 1) * animationConstants.scrollDispersionBaseFactor;
         const yDispersion = ((index % 3) - 1) * scrollProgress * (index + 1) * 3;
@@ -331,7 +375,6 @@ function Model() {
       }
     });
 
-    // Group rotation para desktop
     if (groupRef.current && !isMobile) {
       const mouseInfluence = {
         x: mousePosition.x * animationConstants.mouseInfluenceDesktop,
@@ -347,7 +390,6 @@ function Model() {
     }
   });
 
-  // Material optimizado con configuración adaptativa
   const materialConfig = useMemo(() => (
     isMobile 
       ? { samples: 1, resolution: 720 }
@@ -383,16 +425,11 @@ function Model() {
   );
 }
 
-// Preload optimizado
-useGLTF.preload('/models/break.glb');
-
-// TextElements con mejor memoización
 const TextElements = React.memo(() => {
   const fontSemibold = "/fonts/ClashDisplay-Semibold.ttf";
   const { viewport, size } = useThree();
   const isMobile = useMemo(() => size.width < 640, [size.width]);
 
-  // Configuración memoizada
   const textConfig = useMemo(() => ({
     scale: 1,
     desktopOffsetX: 1.11,
@@ -509,18 +546,11 @@ const TextElements = React.memo(() => {
   }
 });
 
-// Loader optimizado
-const Loader = React.memo(() => (
-  <mesh>
-    <sphereGeometry args={[1, 8, 8]} />
-    <meshStandardMaterial color="#444444" wireframe />
-  </mesh>
-));
-
-// Componente principal con mejor gestión de estado
+// ============= COMPONENTE PRINCIPAL =============
 export default function HeroBackground() {
   const [viewportSize, setViewportSize] = useState('desktop');
   const [isInitialized, setIsInitialized] = useState(false);
+  const [showFallback, setShowFallback] = useState(true);
 
   const checkViewportSize = useCallback(
     debounce(() => {
@@ -538,8 +568,15 @@ export default function HeroBackground() {
     checkViewportSize();
     setIsInitialized(true);
     
+    // Ocultar fallback después de un tiempo mínimo
+    const timer = setTimeout(() => setShowFallback(false), 100);
+    
     window.addEventListener('resize', checkViewportSize, { passive: true });
-    return () => window.removeEventListener('resize', checkViewportSize);
+    
+    return () => {
+      window.removeEventListener('resize', checkViewportSize);
+      clearTimeout(timer);
+    };
   }, [checkViewportSize]);
 
   const heightClass = useMemo(() => {
@@ -568,29 +605,66 @@ export default function HeroBackground() {
     }
   `, []);
 
-  if (!isInitialized) {
-    return <div className={`${heightClass} bg-black`} />;
+  // Fallback mejorado mientras carga
+  if (!isInitialized || showFallback) {
+    return (
+      <>
+        <style dangerouslySetInnerHTML={{ __html: globalStyles }} />
+        <div className={`${heightClass} bg-black flex items-center justify-center`}>
+          <div className="animate-pulse">
+            <div className="w-32 h-8 bg-gray-800 rounded mb-4"></div>
+            <div className="w-48 h-8 bg-gray-800 rounded"></div>
+          </div>
+        </div>
+      </>
+    );
   }
 
   return (
     <>
+      <Head>
+        {/* Precarga crítica de recursos */}
+        <link
+          rel="preload"
+          href="/models/break.glb"
+          as="fetch"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="preload"
+          href="/fonts/ClashDisplay-Semibold.ttf"
+          as="font"
+          type="font/truetype"
+          crossOrigin=""
+        />
+      </Head>
+      
       <style dangerouslySetInnerHTML={{ __html: globalStyles }} />
+      
       <div className={`inset-0 w-full -z-10 px-4 md:px-6 lg:px-8 xl:px-10 2xl:px-20 ${heightClass}`}>
         <Canvas
           camera={{ position: [0, 0, 5], fov: 50 }}
           className="w-full h-full"
           frameloop={isInitialized ? "always" : "never"}
           performance={{ min: 0.5 }}
+          gl={{ 
+            antialias: false,
+            powerPreference: "high-performance"
+          }}
         >
           <color attach="background" args={['#000000']} />
           <ambientLight intensity={0.5} />
           <directionalLight position={[0, 0, 2]} intensity={1.5} color="#FF5741" />
           <pointLight position={[0, 0, 5]} intensity={1.5} color="#FF5741" distance={20} decay={1} />
-          <Suspense fallback={<Loader />}>
+          
+          <Suspense fallback={<OptimizedLoader />}>
+            <PreloadManager />
             <Model />
             <TextElements />
             <Environment preset="city" />
+            <Preload all />
           </Suspense>
+          
           <OrbitControls
             enableZoom={false}
             enablePan={false}
