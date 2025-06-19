@@ -299,9 +299,9 @@ const ContactoForm: React.FC = () => {
         client_company: formData.empresa.trim() || 'No especificada',
         client_message: formData.mensaje.trim() || 'Sin mensaje adicional',
         client_interests: interesesString,
-        company_email: 'antagonik.studio@gmail.com',
+        company_email: 'info@antagonik.com',
         company_phone: '[593] 98 419 6542',
-        company_address: '24 DE LA THAN STREET, DONG DA',
+        company_address: 'OE2H S46D Ciudadela del Ejército Quito - Ecuador',
       };
 
       try {
@@ -559,8 +559,9 @@ const ContactoForm: React.FC = () => {
           <div className="space-y-6 md:space-y-8 font-archivo text-gray-400 mt-auto lg:mt-0">
             <div>
               <p className="text-sm uppercase text-gray-600 mb-1">UBICACION</p>
-              <p className="text-sm">24 DE LA THAN STREET,</p>
-              <p className="text-sm">DONG DA</p>
+              <p className="text-sm">OE2H-S46D,</p>
+              <p className="text-sm">Ciudadela del Ejército,</p>
+              <p className="text-sm">Quito - Ecuador</p>
             </div>
 
             <div className="flex items-center">
@@ -569,18 +570,18 @@ const ContactoForm: React.FC = () => {
 
             <div>
               <p className="text-sm uppercase text-gray-600 mb-1">CONTACTOS</p>
-              <div className="group cursor-pointer w-fit">
+              <Link href="mailto:info@antagonik.com" className="group cursor-pointer w-fit block">
                 <SlideTextOnHover
-                  originalText={<p className="text-sm">ANTAGONIK.STUDIO@GMAIL.COM</p>}
+                  originalText={<p className="text-sm">INFO@ANTAGONIK.COM</p>}
                   hoverText={<p className="text-sm text-white">ESCRÍBENOS</p>}
                 />
-              </div>
-              <div className="group cursor-pointer w-fit">
+              </Link>
+              <Link href="https://wa.me/message/6HLV5OAO5GMBO1" target="_blank" rel="noopener noreferrer" className="group cursor-pointer w-fit block">
                 <SlideTextOnHover
                   originalText={<p className="text-sm">[593] 98 419 6542</p>}
-                  hoverText={<p className="text-sm text-white">LLÁMANOS</p>}
+                  hoverText={<p className="text-sm text-white">WHATSAPP</p>}
                 />
-              </div>
+              </Link>
             </div>
 
             <div className="flex items-center">
@@ -589,22 +590,22 @@ const ContactoForm: React.FC = () => {
 
             <div>
               <p className="text-sm uppercase text-gray-600 mb-1">SIGUENOS</p>
-              <div className="group cursor-pointer w-fit">
+              <Link href="https://linkedin.com/in/fabián-barriga-castellano-264015246" target="_blank" rel="noopener noreferrer" className="group cursor-pointer w-fit block">
                 <SlideTextOnHover
-                  originalText={<p className="text-sm">/ INSTAGRAM</p>}
-                  hoverText={<p className="text-sm text-white">/ INSTAGRAM</p>}
+                  originalText={<p className="text-sm">/ LINKEDIN</p>}
+                  hoverText={<p className="text-sm text-white">/ LINKEDIN</p>}
                 />
-              </div>
-              <div className="group cursor-pointer w-fit">
+              </Link>
+              <Link href="https://www.behance.net/antagonik-estudio" target="_blank" rel="noopener noreferrer" className="group cursor-pointer w-fit block">
                 <SlideTextOnHover
                   originalText={<p className="text-sm">/ BEHANCE</p>}
                   hoverText={<p className="text-sm text-white">/ BEHANCE</p>}
                 />
-              </div>
+              </Link>
               <div className="group cursor-pointer w-fit">
                 <SlideTextOnHover
-                  originalText={<p className="text-sm">/ LINKEDIN</p>}
-                  hoverText={<p className="text-sm text-white">/ LINKEDIN</p>}
+                  originalText={<p className="text-sm">/ INSTAGRAM</p>}
+                  hoverText={<p className="text-sm text-white">/ INSTAGRAM</p>}
                 />
               </div>
             </div>
