@@ -19,10 +19,24 @@ interface ParallaxImageProps {
 const ParallaxImage: React.FC<ParallaxImageProps> = ({ src, alt }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const imageWrapperRef = useRef<HTMLDivElement>(null);
+  const [isMobile, setIsMobile] = React.useState(false);
+
+  // Detectar si es móvil al montar y en resize
+  React.useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useGSAP(() => {
-    if (!containerRef.current || !imageWrapperRef.current) return;
+    if (!containerRef.current || !imageWrapperRef.current || isMobile) return;
 
+    // Solo crear el ScrollTrigger en desktop
     ScrollTrigger.create({
       trigger: containerRef.current,
       start: "top bottom",
@@ -36,7 +50,7 @@ const ParallaxImage: React.FC<ParallaxImageProps> = ({ src, alt }) => {
         });
       }
     });
-  }, { scope: containerRef });
+  }, { scope: containerRef, dependencies: [isMobile] });
 
   return (
     <div
@@ -46,10 +60,11 @@ const ParallaxImage: React.FC<ParallaxImageProps> = ({ src, alt }) => {
       <div
         ref={imageWrapperRef}
         style={{
-          height: "130%",
+          // En móvil, usar dimensiones normales; en desktop, usar las dimensiones para parallax
+          height: isMobile ? "100%" : "130%",
           width: "100%",
           position: "absolute",
-          top: "-15%",
+          top: isMobile ? "0" : "-15%",
           left: 0,
         }}
       >
@@ -276,7 +291,7 @@ const Vision: React.FC = () => {
     <section 
       ref={sectionRef}
       className="relative z-10 bg-dark text-white px-4 md:px-6 lg:px-8 xl:px-10 2xl:px-20 pt-10 md:pt-16 lg:pt-20 2xl:pt-32 pb-12 lg:pb-24 2xl:pb-32" 
-      id="perspectiva"
+      id="visión"
     >
       <Encabezado
         numero="04"
