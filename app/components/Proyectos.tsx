@@ -1,7 +1,8 @@
 "use client";
-import React, { useRef, useEffect, useState, useLayoutEffect } from 'react';
+import React, { useRef, useState, useLayoutEffect } from 'react';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
+import { useGSAP } from "@gsap/react";
 import CircularRotatingText from './RotatingText';
 import Encabezado from './Encabezado';
 import { gsap, ScrollTrigger } from "@/lib/gsapInit";
@@ -9,16 +10,16 @@ import { gsap, ScrollTrigger } from "@/lib/gsapInit";
 // Interfaces para tipado
 interface ProjectData {
   images: string[];
-  mobileImages: string[]; // Nueva propiedad para imágenes móviles
+  mobileImages: string[];
   title: string;
   tags: string[];
   year: string;
-  url?: string; // Agregamos URL opcional para cada proyecto
+  url?: string;
 }
 
 interface ParallaxImageProps {
   src: string;
-  mobileSrc: string; // Nueva propiedad
+  mobileSrc: string;
   alt: string;
 }
 
@@ -27,17 +28,11 @@ interface ProjectCardProps {
   index: number;
 }
 
-// Extensión del HTMLElement para agregar propiedades personalizadas
-interface HTMLElementWithHandlers extends HTMLElement {
-  _mouseEnterHandler?: () => void;
-  _mouseLeaveHandler?: () => void;
-}
-
 const Proyectos: React.FC = () => {
   const projectsData: ProjectData[] = [
     {
       images: ["/images/proyectos/proyecto1.webp"],
-      mobileImages: ["/images/proyectos/proyecto1-mobile.webp"], // Nueva
+      mobileImages: ["/images/proyectos/proyecto1-mobile.webp"],
       title: "Sisawiru",
       tags: ["Branding", "Packaging"],
       year: "/2024",
@@ -45,7 +40,7 @@ const Proyectos: React.FC = () => {
     },
     {
       images: ["/images/proyectos/proyecto2.webp"],
-      mobileImages: ["/images/proyectos/proyecto2-mobile.webp"], // Nueva
+      mobileImages: ["/images/proyectos/proyecto2-mobile.webp"],
       title: "593 SECURITY",
       tags: ["UX", "UI", "Webflow"],
       year: "/2025",
@@ -53,7 +48,7 @@ const Proyectos: React.FC = () => {
     },
     {
       images: ["/images/proyectos/proyecto3.webp"],
-      mobileImages: ["/images/proyectos/proyecto3-mobile.webp"], // Nueva
+      mobileImages: ["/images/proyectos/proyecto3-mobile.webp"],
       title: "LOGOFOLIO",
       tags: ["Identidad visual", "Logo design"],
       year: "/2023",
@@ -61,30 +56,21 @@ const Proyectos: React.FC = () => {
     },
     {
       images: ["/images/proyectos/proyecto4.webp"],
-      mobileImages: ["/images/proyectos/proyecto4-mobile.webp"], // Nueva
+      mobileImages: ["/images/proyectos/proyecto4-mobile.webp"],
       title: "YOKUN",
       tags: ["Branding", "Identidad visual"],
       year: "/2025"
-      // No URL para YOKUN ya que está "PRÓXIMAMENTE"
     }
   ];
 
-  // Referencia para el contenedor principal de proyectos
+  // Referencias
   const projectsContainerRef = useRef<HTMLElement>(null);
 
-  // Referencia para almacenar el contexto de animación
-  const animationContextRef = useRef<gsap.Context | null>(null);
-
-  // Referencia para almacenar ScrollTriggers
-  const scrollTriggersRef = useRef<ScrollTrigger[]>([]);
-
-  // Estado para manejar la inicialización
+  // Estados
   const [isReady, setIsReady] = useState<boolean>(false);
-
-  // Estado para detectar dispositivos móviles
   const [isMobile, setIsMobile] = useState<boolean>(false);
 
-  // Hook para detectar cambios de ruta en Next.js
+  // Hook para detectar cambios de ruta
   const pathname = usePathname();
 
   // Función para manejar el click en un proyecto
@@ -94,42 +80,100 @@ const Proyectos: React.FC = () => {
     }
   };
 
-  // Función para limpiar animaciones existentes
-  const cleanupAnimations = (): void => {
-    // Limpiar ScrollTriggers específicos de este componente
-    scrollTriggersRef.current.forEach(trigger => {
-      if (trigger && trigger.kill) {
-        trigger.kill();
-      }
-    });
-    scrollTriggersRef.current = [];
-
-    // Revertir el contexto de animación si existe
-    if (animationContextRef.current) {
-      animationContextRef.current.revert();
-      animationContextRef.current = null;
-    }
+  // Función para detectar si es móvil
+  const checkMobile = (): void => {
+    setIsMobile(window.innerWidth <= 768);
   };
 
-  // Función para configurar animaciones hover
-  const setupHoverAnimations = (): void => {
-    if (!projectsContainerRef.current) return;
+  // useGSAP para manejar todas las animaciones
+  useGSAP(() => {
+    if (!isReady || !projectsContainerRef.current) return;
 
+    // Animaciones para líneas de proyecto
+    const lines = projectsContainerRef.current.querySelectorAll('.project-line');
+    lines.forEach((line) => {
+      ScrollTrigger.create({
+        trigger: line as Element,
+        start: "top 90%",
+        end: "bottom 10%",
+        toggleActions: "play none none reverse",
+        markers: false,
+        animation: gsap.fromTo(
+          line,
+          { scaleX: 0, transformOrigin: "left center" },
+          { scaleX: 1, duration: 1.2, ease: "power2.out" }
+        )
+      });
+    });
+
+    // Animaciones para títulos de proyecto
+    const projectTitles = projectsContainerRef.current.querySelectorAll('.project-title');
+    projectTitles.forEach((title) => {
+      ScrollTrigger.create({
+        trigger: title.closest('.project-card') as Element,
+        start: "top 60%",
+        toggleActions: "play none none reverse",
+        animation: gsap.fromTo(
+          title,
+          { y: 30, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.8, ease: "power3.out" }
+        )
+      });
+    });
+
+    // Animaciones para etiquetas de proyecto
+    const projectTags = projectsContainerRef.current.querySelectorAll('.project-tags');
+    projectTags.forEach((tags) => {
+      ScrollTrigger.create({
+        trigger: tags.closest('.project-card') as Element,
+        start: "top 60%",
+        toggleActions: "play none none reverse",
+        animation: gsap.fromTo(
+          tags,
+          { y: 30, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.8, delay: 0.1, ease: "power3.out" }
+        )
+      });
+    });
+
+    // Animaciones para año de proyecto
+    const projectYears = projectsContainerRef.current.querySelectorAll('.project-year');
+    projectYears.forEach((year) => {
+      ScrollTrigger.create({
+        trigger: year.closest('.project-card') as Element,
+        start: "top 60%",
+        toggleActions: "play none none reverse",
+        animation: gsap.fromTo(
+          year,
+          { y: 30, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.8, delay: 0.2, ease: "power3.out" }
+        )
+      });
+    });
+
+    // Configuración de parallax para imágenes
+    const parallaxImages = projectsContainerRef.current.querySelectorAll('.parallax-image-wrapper');
+    parallaxImages.forEach((wrapper) => {
+      const container = wrapper.closest('.parallax-container');
+      ScrollTrigger.create({
+        trigger: container as Element,
+        start: "top bottom",
+        end: "bottom top",
+        scrub: true,
+        invalidateOnRefresh: true,
+        animation: gsap.fromTo(
+          wrapper,
+          { y: "-35%" },
+          { y: "35%", ease: "none" }
+        )
+      });
+    });
+
+    // Configurar animaciones hover
     const projectCards = projectsContainerRef.current.querySelectorAll('.project-card');
-
     projectCards.forEach((card) => {
-      const cardElement = card as HTMLElementWithHandlers;
       const image = card.querySelector('.project-image') as HTMLElement;
 
-      // Remover handlers anteriores si existen
-      if (cardElement._mouseEnterHandler) {
-        cardElement.removeEventListener('mouseenter', cardElement._mouseEnterHandler);
-      }
-      if (cardElement._mouseLeaveHandler) {
-        cardElement.removeEventListener('mouseleave', cardElement._mouseLeaveHandler);
-      }
-
-      // Crear nuevos handlers para hover de las tarjetas de proyecto
       const handleMouseEnter = (): void => {
         if (image) {
           gsap.to(image, {
@@ -150,190 +194,63 @@ const Proyectos: React.FC = () => {
         }
       };
 
-      // Guardar referencias a los handlers
-      cardElement._mouseEnterHandler = handleMouseEnter;
-      cardElement._mouseLeaveHandler = handleMouseLeave;
+      card.addEventListener('mouseenter', handleMouseEnter);
+      card.addEventListener('mouseleave', handleMouseLeave);
 
-      // Agregar event listeners
-      cardElement.addEventListener('mouseenter', handleMouseEnter);
-      cardElement.addEventListener('mouseleave', handleMouseLeave);
+      // Cleanup se maneja automáticamente por useGSAP
+      return () => {
+        card.removeEventListener('mouseenter', handleMouseEnter);
+        card.removeEventListener('mouseleave', handleMouseLeave);
+      };
     });
-  };
 
-  // Función para inicializar animaciones
-  const setupAnimations = (): void => {
-    if (!projectsContainerRef.current || !isReady) return;
+  }, { 
+    scope: projectsContainerRef, 
+    dependencies: [isReady, pathname, isMobile],
+    revertOnUpdate: true
+  });
 
-    // Limpiar animaciones previas
-    cleanupAnimations();
-
-    // Crear nuevo contexto GSAP
-    animationContextRef.current = gsap.context(() => {
-      // Animaciones para líneas de proyecto
-      const lines = projectsContainerRef.current!.querySelectorAll('.project-line');
-      lines.forEach((line) => {
-        const lineTrigger = ScrollTrigger.create({
-          trigger: line as Element,
-          start: "top 90%",
-          end: "bottom 10%",
-          toggleActions: "play none none reverse",
-          markers: false,
-          animation: gsap.fromTo(
-            line,
-            { scaleX: 0, transformOrigin: "left center" },
-            { scaleX: 1, duration: 1.2, ease: "power2.out" }
-          )
-        });
-        scrollTriggersRef.current.push(lineTrigger);
-      });
-
-      // Animaciones para títulos de proyecto
-      const projectTitles = projectsContainerRef.current!.querySelectorAll('.project-title');
-      projectTitles.forEach((title) => {
-        const titleTrigger = ScrollTrigger.create({
-          trigger: title.closest('.project-card') as Element,
-          start: "top 60%",
-          toggleActions: "play none none reverse",
-          animation: gsap.fromTo(
-            title,
-            { y: 30, opacity: 0 },
-            { y: 0, opacity: 1, duration: 0.8, ease: "power3.out" }
-          )
-        });
-        scrollTriggersRef.current.push(titleTrigger);
-      });
-
-      // Animaciones para etiquetas de proyecto
-      const projectTags = projectsContainerRef.current!.querySelectorAll('.project-tags');
-      projectTags.forEach((tags) => {
-        const tagsTrigger = ScrollTrigger.create({
-          trigger: tags.closest('.project-card') as Element,
-          start: "top 60%",
-          toggleActions: "play none none reverse",
-          animation: gsap.fromTo(
-            tags,
-            { y: 30, opacity: 0 },
-            { y: 0, opacity: 1, duration: 0.8, delay: 0.1, ease: "power3.out" }
-          )
-        });
-        scrollTriggersRef.current.push(tagsTrigger);
-      });
-
-      // Animaciones para año de proyecto
-      const projectYears = projectsContainerRef.current!.querySelectorAll('.project-year');
-      projectYears.forEach((year) => {
-        const yearTrigger = ScrollTrigger.create({
-          trigger: year.closest('.project-card') as Element,
-          start: "top 60%",
-          toggleActions: "play none none reverse",
-          animation: gsap.fromTo(
-            year,
-            { y: 30, opacity: 0 },
-            { y: 0, opacity: 1, duration: 0.8, delay: 0.2, ease: "power3.out" }
-          )
-        });
-        scrollTriggersRef.current.push(yearTrigger);
-      });
-
-      // Configuración de parallax para imágenes
-      const parallaxImages = projectsContainerRef.current!.querySelectorAll('.parallax-image-wrapper');
-      parallaxImages.forEach((wrapper) => {
-        const container = wrapper.closest('.parallax-container');
-        const parallaxTrigger = ScrollTrigger.create({
-          trigger: container as Element,
-          start: "top bottom",
-          end: "bottom top",
-          scrub: true,
-          invalidateOnRefresh: true,
-          animation: gsap.fromTo(
-            wrapper,
-            { y: "-35%" },
-            { y: "35%", ease: "none" }
-          )
-        });
-        scrollTriggersRef.current.push(parallaxTrigger);
-      });
-    }, projectsContainerRef);
-
-    // Configurar animaciones hover
-    setupHoverAnimations();
-  };
-
-  // Función para detectar si es móvil o cambio de tamaño
-  const checkMobile = (): void => {
-    setIsMobile(window.innerWidth <= 768);
-  };
-
-  // useLayoutEffect para mediciones DOM antes del renderizado
+  // useLayoutEffect para configuración inicial
   useLayoutEffect(() => {
-    // Solo ejecutar en el cliente
     if (typeof window === "undefined") return;
 
-    // Verificar inicialmente si es móvil
     checkMobile();
     setIsReady(true);
 
-    // Agregar listener para cambios de tamaño de ventana
-    window.addEventListener('resize', checkMobile);
+    const handleResize = (): void => {
+      checkMobile();
+    };
+
+    const handleVisibilityChange = (): void => {
+      if (document.visibilityState === 'visible') {
+        ScrollTrigger.refresh();
+      }
+    };
+
+    const handleRouteChange = (): void => {
+      ScrollTrigger.refresh();
+    };
+
+    window.addEventListener('resize', handleResize);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('popstate', handleRouteChange);
 
     return () => {
-      cleanupAnimations();
-      window.removeEventListener('resize', checkMobile);
+      window.removeEventListener('resize', handleResize);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('popstate', handleRouteChange);
       setIsReady(false);
     };
   }, []);
 
-  // useEffect para inicializar animaciones cuando todo esté listo
-  useEffect(() => {
-    if (!isReady) return;
-
-    const timer = setTimeout(() => {
-      setupAnimations();
-    }, 100);
-
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [isReady, pathname]);
-
-  // useEffect para manejar cambios de visibilidad y navegación
-  useEffect(() => {
-    if (!isReady) return;
-
-    const handleVisibilityChange = (): void => {
-      if (document.visibilityState === 'visible') {
-        // Refrescar animaciones cuando la página vuelve a ser visible
-        ScrollTrigger.refresh();
-        setTimeout(() => {
-          setupAnimations();
-        }, 100);
-      }
-    };
-
-    // Event listener para cambios de visibilidad
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    // Event listener para cambios de ruta con Next.js
-    const handleRouteChange = (): void => {
-      setTimeout(() => {
-        ScrollTrigger.refresh();
-        setupAnimations();
-      }, 100);
-    };
-
-    // Para navegación con el botón atrás/adelante del navegador
-    window.addEventListener('popstate', handleRouteChange);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('popstate', handleRouteChange);
-    };
-  }, [isReady]);
-
-  // Componente ParallaxImage con funcionalidad de botón de seguimiento
-  const ParallaxImage: React.FC<ParallaxImageProps & { projectTitle?: string; onImageClick?: () => void; index?: number }> = ({ 
+  // Componente ParallaxImage
+  const ParallaxImage: React.FC<ParallaxImageProps & { 
+    projectTitle?: string; 
+    onImageClick?: () => void; 
+    index?: number 
+  }> = ({ 
     src, 
-    mobileSrc, // Nueva prop
+    mobileSrc, 
     alt, 
     projectTitle, 
     onImageClick,
@@ -348,8 +265,6 @@ const Proyectos: React.FC = () => {
     const buttonPosition = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
     const animationFrameRef = useRef<number | null>(null);
     const currentAnimationRef = useRef<gsap.core.Tween | null>(null);
-
-    // Referencias para el seguimiento global del cursor
     const lastViewportPosition = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
     const isMouseInside = useRef<boolean>(false);
     const isScrolling = useRef<boolean>(false);
@@ -364,13 +279,10 @@ const Proyectos: React.FC = () => {
 
       const lerp = (start: number, end: number, factor: number): number => start + (end - start) * factor;
       
-      // Durante el scroll, usar actualización más directa para evitar lag
       if (isScrolling.current) {
-        // Durante scroll, actualizar posición más directamente
         buttonPosition.current.x = mousePosition.current.x;
         buttonPosition.current.y = mousePosition.current.y;
       } else {
-        // Fuera del scroll, usar animación suave normal
         const ease = 0.2;
         buttonPosition.current.x = lerp(buttonPosition.current.x, mousePosition.current.x, ease);
         buttonPosition.current.y = lerp(buttonPosition.current.y, mousePosition.current.y, ease);
@@ -386,7 +298,6 @@ const Proyectos: React.FC = () => {
       const deltaX = Math.abs(mousePosition.current.x - buttonPosition.current.x);
       const deltaY = Math.abs(mousePosition.current.y - buttonPosition.current.y);
 
-      // Continuar animando mientras haya diferencia significativa o durante scroll
       if ((deltaX > 0.3 || deltaY > 0.3 || isScrolling.current) && showButton && isMouseInside.current) {
         animationFrameRef.current = requestAnimationFrame(animateButtonPosition);
       } else {
@@ -400,34 +311,26 @@ const Proyectos: React.FC = () => {
         return;
       }
 
-      // Marcar que estamos scrolleando
       isScrolling.current = true;
 
-      // Limpiar timeout anterior
       if (scrollTimeoutRef.current) {
         clearTimeout(scrollTimeoutRef.current);
       }
 
-      // Recalcular la posición relativa del cursor respecto al elemento
       const rect = containerRef.current.getBoundingClientRect();
       const cursorX = lastViewportPosition.current.x;
       const cursorY = lastViewportPosition.current.y;
       
-      // Calcular nueva posición relativa
       const newRelativeX = cursorX - rect.left;
       const newRelativeY = cursorY - rect.top;
       
-      // Verificar si el cursor sigue dentro del elemento después del scroll
       const isStillInside = newRelativeX >= 0 && newRelativeX <= rect.width && 
                            newRelativeY >= 0 && newRelativeY <= rect.height;
 
       if (isStillInside) {
-        // Actualizar la posición del cursor relativa al elemento
         mousePosition.current = { x: newRelativeX, y: newRelativeY };
         
-        // Forzar actualización inmediata de la posición del botón
         if (buttonRef.current) {
-          // Actualizar directamente la posición objetivo del botón
           gsap.set(buttonRef.current, {
             x: newRelativeX,
             y: newRelativeY,
@@ -435,32 +338,26 @@ const Proyectos: React.FC = () => {
             yPercent: -50
           });
           
-          // Actualizar también la posición de seguimiento
           buttonPosition.current = { x: newRelativeX, y: newRelativeY };
         }
         
-        // Iniciar/continuar la animación suave si no está corriendo
         if (!animationFrameRef.current) {
           animationFrameRef.current = requestAnimationFrame(animateButtonPosition);
         }
       } else {
-        // Si el cursor ya no está dentro después del scroll, ocultar el botón
         isMouseInside.current = false;
         handleMouseLeave();
         return;
       }
 
-      // Resetear el flag de scroll después de un delay
       scrollTimeoutRef.current = setTimeout(() => {
         isScrolling.current = false;
       }, 150);
     };
 
     const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>): void => {
-      // Prevenir el movimiento del botón en móviles
       if (isMobile || !containerRef.current || !showButton) return;
 
-      // Actualizar posición global del cursor
       lastViewportPosition.current = { x: e.clientX, y: e.clientY };
 
       const rect = containerRef.current.getBoundingClientRect();
@@ -475,14 +372,10 @@ const Proyectos: React.FC = () => {
     };
 
     const handleMouseEnter = (e: React.MouseEvent<HTMLDivElement>): void => {
-      // Prevenir que el botón aparezca en dispositivos móviles
-      if (isMobile) return;
-      
-      if (!containerRef.current) return;
+      if (isMobile || !containerRef.current) return;
 
       isMouseInside.current = true;
       
-      // Guardar posición inicial
       lastViewportPosition.current = { x: e.clientX, y: e.clientY };
       
       const rect = containerRef.current.getBoundingClientRect();
@@ -496,7 +389,6 @@ const Proyectos: React.FC = () => {
     };
 
     const handleMouseLeave = (): void => {
-      // En móvil, asegurarse de que el botón no se muestre
       if (isMobile) {
         setShowButton(false);
         return;
@@ -526,15 +418,14 @@ const Proyectos: React.FC = () => {
       }
     };
 
-    // Manejar click en el contenedor
     const handleContainerClick = (): void => {
       if (onImageClick) {
         onImageClick();
       }
     };
 
-    // Efecto para animar la entrada del botón
-    useEffect(() => {
+    // useGSAP para animaciones del botón
+    useGSAP(() => {
       if (showButton && buttonRef.current && !isMobile) {
         gsap.set(buttonRef.current, {
           x: buttonPosition.current.x,
@@ -545,23 +436,22 @@ const Proyectos: React.FC = () => {
           opacity: 0
         });
 
-        currentAnimationRef.current = gsap.to(buttonRef.current, {
+        gsap.to(buttonRef.current, {
           scale: 1,
           opacity: 1,
           duration: 0.4,
           ease: "back.out(1.7)",
           onComplete: () => {
-            // Iniciar seguimiento después de que aparezca
             if (!animationFrameRef.current) {
               animationFrameRef.current = requestAnimationFrame(animateButtonPosition);
             }
           }
         });
       }
-    }, [showButton, isMobile]);
+    }, { dependencies: [showButton, isMobile] });
 
-    // useEffect adicional para forzar el ocultamiento en móvil
-    useEffect(() => {
+    // useLayoutEffect para configurar listeners
+    useLayoutEffect(() => {
       if (isMobile && showButton) {
         setShowButton(false);
         if (animationFrameRef.current) {
@@ -569,21 +459,13 @@ const Proyectos: React.FC = () => {
           animationFrameRef.current = null;
         }
       }
-    }, [isMobile, showButton]);
 
-    // Listener para el scroll
-    useEffect(() => {
       if (!isMobile) {
         window.addEventListener('scroll', handleScroll, { passive: true });
-        return () => {
-          window.removeEventListener('scroll', handleScroll);
-        };
       }
-    }, [showButton, isMobile]);
 
-    // Cleanup
-    useEffect(() => {
       return () => {
+        window.removeEventListener('scroll', handleScroll);
         if (animationFrameRef.current) {
           cancelAnimationFrame(animationFrameRef.current);
         }
@@ -594,9 +476,8 @@ const Proyectos: React.FC = () => {
           clearTimeout(scrollTimeoutRef.current);
         }
       };
-    }, []);
+    }, [showButton, isMobile]);
 
-    // Determinar qué imagen usar basado en el estado isMobile
     const imageSrc = isMobile ? mobileSrc : src;
 
     return (
@@ -625,7 +506,7 @@ const Proyectos: React.FC = () => {
                 alt={alt}
                 fill
                 sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                priority={index === 0} // Solo la primera imagen tiene prioridad
+                priority={index === 0}
                 className="object-cover project-image transition-transform duration-100"
                 style={{
                   transition: "transform 0.1s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
@@ -635,7 +516,6 @@ const Proyectos: React.FC = () => {
             </div>
           </div>
 
-          {/* Botón píldora redondeado - solo en desktop */}
           {!isMobile && (
             <div
               ref={buttonRef}
@@ -649,7 +529,7 @@ const Proyectos: React.FC = () => {
                 opacity: 0,
                 transform: 'scale(0) translate(-50%, -50%)',
                 display: showButton ? 'flex' : 'none',
-                borderRadius: '24px', // Hace el botón tipo píldora
+                borderRadius: '24px',
                 minWidth: 'fit-content',
                 whiteSpace: 'nowrap'
               }}
@@ -670,11 +550,11 @@ const Proyectos: React.FC = () => {
     >
       <ParallaxImage 
         src={project.images[0]} 
-        mobileSrc={project.mobileImages[0]} // Nueva prop
+        mobileSrc={project.mobileImages[0]}
         alt={`${project.title} Image`} 
         projectTitle={project.title}
         onImageClick={() => handleProjectClick(project)}
-        index={index} // Pasar el índice para prioridad
+        index={index}
       />
       <div className="pt-5 pb-1 flex-grow flex items-center justify-between">
         <div className="flex items-center space-x-4">
@@ -701,7 +581,6 @@ const Proyectos: React.FC = () => {
           </div>
         </div>
       </div>
-      {/* Línea consistente con altura fija en píxeles y sin border-radius */}
       <div
         className="project-line w-full bg-gray-800 mt-2"
         style={{ 
@@ -717,7 +596,7 @@ const Proyectos: React.FC = () => {
   );
 
   return (
-    <section ref={projectsContainerRef} className="bg-dark text-white w-full py-2 px-4 md:px-6 lg:px-8 xl:px-10 2xl:px-20 pt-10 md:pt-16 lg:pt-20  2xl:pt-32" id="proyectos">
+    <section ref={projectsContainerRef} className="bg-dark text-white w-full py-2 px-4 md:px-6 lg:px-8 xl:px-10 2xl:px-20 pt-10 md:pt-16 lg:pt-20 2xl:pt-32" id="proyectos">
       <Encabezado numero="02" seccion="Proyectos" titulo="Convertimos los retos creativos en oportunidades de crear algo memorable" />
 
       <div className="relative grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8 mt-12 md:mt-16 lg:mt-24 2xl:mt-32" style={{ overflow: 'visible' }}>
