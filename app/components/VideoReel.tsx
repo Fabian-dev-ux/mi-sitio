@@ -7,89 +7,56 @@ const VideoReel = () => {
   const sectionRef = useRef<HTMLElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isMobile, setIsMobile] = useState(false);
-  const [videoSources, setVideoSources] = useState({ webm: '', mp4: '' });
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-
-    // Función para detectar si es mobile
+    
     const checkIsMobile = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
       
-      // Establecer las fuentes del video según el tamaño de pantalla
-      if (mobile) {
-        setVideoSources({
-          webm: '/videos/vid-antagonik-mobile.webm',
-          mp4: '/videos/vid-antagonik-mobile.mp4'
-        });
-      } else {
-        setVideoSources({
-          webm: '/videos/vid-antagonik.webm',
-          mp4: '/videos/vid-antagonik.mp4'
-        });
+      // Forzar recarga del video cuando cambia el tamaño
+      if (videoRef.current) {
+        videoRef.current.load();
       }
     };
 
-    // Verificar inicialmente
     checkIsMobile();
-
-    // Escuchar cambios de tamaño de ventana
-    const handleResize = () => {
-      checkIsMobile();
-    };
-
-    window.addEventListener('resize', handleResize);
-
-    // Limpiar listener
-    return () => {
-      window.removeEventListener('resize', handleResize);
-    };
+    window.addEventListener('resize', checkIsMobile);
+    
+    return () => window.removeEventListener('resize', checkIsMobile);
   }, []);
 
-  // Reemplazar el useEffect de GSAP con useGSAP
+  // Configuración de GSAP solo para desktop
   useGSAP(() => {
-    if (!sectionRef.current || !videoRef.current) return;
+    if (!sectionRef.current || !videoRef.current || isMobile) return;
 
-    // Solo aplicar parallax en desktop (pantallas >= 768px)
-    if (!isMobile) {
-      // OPCIÓN 3: Parallax con clip-path (SOLO DESKTOP)
-      ScrollTrigger.create({
-        trigger: sectionRef.current,
-        start: "top bottom",
-        end: "bottom top",
-        scrub: true,
-        animation: gsap.fromTo(
-          videoRef.current,
-          { 
-            yPercent: -45,
-            clipPath: "inset(0% 0% 0% 0%)"
-          },
-          { 
-            yPercent: 45,
-            clipPath: "inset(0% 0% 0% 0%)",
-            ease: "none" 
-          }
-        )
-      });
-    }
+    ScrollTrigger.create({
+      trigger: sectionRef.current,
+      start: "top bottom",
+      end: "bottom top",
+      scrub: 1,
+      animation: gsap.fromTo(
+        videoRef.current,
+        { yPercent: -30 },
+        { yPercent: 30, ease: "none" }
+      )
+    });
+
   }, { dependencies: [isMobile], scope: sectionRef });
 
-  // Función para recargar el video cuando cambien las fuentes
+  // Efecto para recargar video cuando cambia isMobile
   useEffect(() => {
-    if (videoRef.current && videoSources.webm) {
-      const video = videoRef.current;
-      const currentTime = video.currentTime;
-      
-      // Recargar el video con las nuevas fuentes
-      video.load();
-      
-      // Mantener el tiempo actual si es posible
-      video.addEventListener('loadedmetadata', () => {
-        video.currentTime = currentTime;
-      }, { once: true });
+    if (videoRef.current) {
+      videoRef.current.load();
     }
-  }, [videoSources]);
+  }, [isMobile]);
+
+  // Determinar fuentes de video
+  const videoSources = {
+    webm: isMobile ? '/videos/vid-antagonik-mobile.webm' : '/videos/vid-antagonik.webm',
+    mp4: isMobile ? '/videos/vid-antagonik-mobile.mp4' : '/videos/vid-antagonik.mp4'
+  };
 
   return (
     <section 
@@ -104,18 +71,15 @@ const VideoReel = () => {
           loop
           muted
           playsInline
+          key={isMobile ? 'mobile' : 'desktop'} // Fuerza re-render
           className="absolute inset-0 w-full h-full object-cover"
           style={{
-            transformOrigin: "center center"
+            transformOrigin: "center center",
+            transform: isMobile ? 'none' : undefined // Sin transformaciones en mobile
           }}
         >
-          {/* Fuentes dinámicas basadas en el estado */}
-          {videoSources.webm && (
-            <source src={videoSources.webm} type="video/webm" />
-          )}
-          {videoSources.mp4 && (
-            <source src={videoSources.mp4} type="video/mp4" />
-          )}
+          <source src={videoSources.webm} type="video/webm" />
+          <source src={videoSources.mp4} type="video/mp4" />
         </video>
       </div>
     </section>
