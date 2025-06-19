@@ -317,7 +317,7 @@ const ProcesoSectionSticky: React.FC = () => {
   // Componente Card para reutilizar
   const Card: React.FC<CardProps> = ({ etapa, index }) => (
     <div className={`flex-shrink-0 ${isMobile ? 'w-full' : 'w-[400px]'}`}>
-      <div className="flex flex-col h-full p-6">
+      <div className="flex flex-col h-full px-0 py-6">
         
         {/* Número */}
         <div className="text-sm text-gray-700 mb-4 font-['Clash_Display',sans-serif]">
@@ -338,7 +338,7 @@ const ProcesoSectionSticky: React.FC = () => {
         </p>
         
         {/* Tags */}
-        <div className="flex gap-2 flex-wrap mb-6">
+        <div className="flex gap-0 flex-wrap mb-6">
           {etapa.tags.map((tag, tagIndex) => (
             <span 
               key={tagIndex}
@@ -378,7 +378,7 @@ const ProcesoSectionSticky: React.FC = () => {
           <div className="flex justify-start items-center gap-4 mb-8 mt-8">
             <button
               onClick={prevSlide}
-              className="w-12 h-12 rounded-full border border-gray-700 bg-transparent text-gray-400 flex items-center justify-center cursor-pointer transition-all duration-300 hover:border-gray-600 hover:text-gray-300"
+              className="w-12 h-12 rounded-full border border-gray-800 bg-transparent text-gray-400 flex items-center justify-center cursor-pointer transition-all duration-300 hover:border-gray-600 hover:text-gray-300"
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -387,7 +387,7 @@ const ProcesoSectionSticky: React.FC = () => {
             
             <button
               onClick={nextSlide}
-              className="w-12 h-12 rounded-full border border-gray-700 bg-transparent text-gray-400 flex items-center justify-center cursor-pointer transition-all duration-300 hover:border-gray-600 hover:text-gray-300"
+              className="w-12 h-12 rounded-full border border-gray-800 bg-transparent text-gray-400 flex items-center justify-center cursor-pointer transition-all duration-300 hover:border-gray-600 hover:text-gray-300"
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M9 18L15 12L9 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
