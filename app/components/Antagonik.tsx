@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { gsap, ScrollTrigger } from "@/lib/gsapInit";
+import { useGSAP } from "@gsap/react";
 
 // Cargar el componente AntagonikAni dinámicamente para evitar problemas de SSR
 const AntagonikAni = dynamic(() => import("./AntagonikAni"), {
@@ -31,10 +32,6 @@ export default function Antagonik(): JSX.Element {
     width: 0, 
     height: 0 
   });
-  
-  // Referencia para almacenar las animaciones y ScrollTriggers
-  const animationContextRef = useRef<gsap.Context | null>(null);
-  const scrollTriggersRef = useRef<ScrollTrigger[]>([]);
   
   // Número de franjas de la persiana
   const numBlinds: number = 12;
@@ -90,148 +87,90 @@ export default function Antagonik(): JSX.Element {
     }
   };
 
-  // Función para configurar todas las animaciones
-  const setupAnimations = (): void => {
-    // Limpiar ScrollTriggers existentes para evitar duplicados
-    scrollTriggersRef.current.forEach((trigger: ScrollTrigger) => trigger.kill());
-    scrollTriggersRef.current = [];
+  // Usar useGSAP en lugar de useEffect para las animaciones
+  useGSAP(() => {
+    // Actualizar las dimensiones inicialmente
+    updateBounds();
     
-    // Limpiar contexto de animación anterior
-    if (animationContextRef.current) {
-      animationContextRef.current.revert();
-    }
-    
-    // Crear nuevo contexto de animación
-    animationContextRef.current = gsap.context(() => {
-      // Actualizar las dimensiones inicialmente
-      updateBounds();
+    // Animación para las tres líneas del título
+    if (tituloRef.current) {
+      const lineas: NodeListOf<Element> = tituloRef.current.querySelectorAll(".linea-titulo");
       
-      // Animación para las tres líneas del título
-      if (tituloRef.current) {
-        const lineas: NodeListOf<Element> = tituloRef.current.querySelectorAll(".linea-titulo");
-        
-        const titleTrigger: ScrollTrigger = ScrollTrigger.create({
-          trigger: tituloRef.current,
-          start: "top 80%",
-          end: "top 40%",
-          toggleActions: "play none none reverse",
-          animation: gsap.fromTo(
-            lineas,
-            { 
-              y: "100%",
-              opacity: 0
-            },
-            { 
-              y: "0%",
-              opacity: 1,
-              duration: 0.7,
-              ease: "power3.out",
-              stagger: 0.1 // Pequeño retraso entre cada línea
-            }
-          )
-        });
-        
-        scrollTriggersRef.current.push(titleTrigger);
-      }
+      ScrollTrigger.create({
+        trigger: tituloRef.current,
+        start: "top 80%",
+        end: "top 40%",
+        toggleActions: "play none none reverse",
+        animation: gsap.fromTo(
+          lineas,
+          { 
+            y: "100%",
+            opacity: 0
+          },
+          { 
+            y: "0%",
+            opacity: 1,
+            duration: 0.7,
+            ease: "power3.out",
+            stagger: 0.1
+          }
+        )
+      });
+    }
 
-      // Animación para las franjas de la persiana
-      if (persianaRef.current) {
-        const blindStripes: NodeListOf<Element> = persianaRef.current.querySelectorAll(".blind-stripe");
-        
-        const blindTrigger: ScrollTrigger = ScrollTrigger.create({
-          trigger: containerRef.current,
-          start: "top 80%",
-          end: "top 20%",
-          toggleActions: "play none none reverse",
-          animation: gsap.to(blindStripes, {
-            scaleY: 0,
-            duration: 0.8,
-            stagger: 0.05,
-            ease: "power2.inOut"
-          })
-        });
-        
-        scrollTriggersRef.current.push(blindTrigger);
-      }
-    });
-  };
+    // Animación para las franjas de la persiana
+    if (persianaRef.current) {
+      const blindStripes: NodeListOf<Element> = persianaRef.current.querySelectorAll(".blind-stripe");
+      
+      ScrollTrigger.create({
+        trigger: containerRef.current,
+        start: "top 80%",
+        end: "top 20%",
+        toggleActions: "play none none reverse",
+        animation: gsap.to(blindStripes, {
+          scaleY: 0,
+          duration: 0.8,
+          stagger: 0.05,
+          ease: "power2.inOut"
+        })
+      });
+    }
 
-  useEffect(() => {
-    // Solo ejecutar en el cliente
-    if (typeof window === 'undefined') return;
-    
-    // Añadir un pequeño retraso para asegurar que el DOM esté listo
-    const initTimer: NodeJS.Timeout = setTimeout(() => {
-      setupAnimations();
-    }, 100);
-    
-    // Actualizar las dimensiones cuando cambie el tamaño de la ventana
+    // Manejar resize
     const handleResize = (): void => {
       updateBounds();
+      ScrollTrigger.refresh();
     };
     
     window.addEventListener('resize', handleResize);
     
-    // Evento para cuando el usuario regresa a la página
+    // Manejar visibilidad
     const handleVisibilityChange = (): void => {
       if (document.visibilityState === 'visible') {
-        // Cuando se vuelve a la página, refrescar animaciones
         setTimeout(() => {
           ScrollTrigger.refresh();
-          setupAnimations();
         }, 100);
       }
     };
     
     document.addEventListener('visibilitychange', handleVisibilityChange);
     
-    // Forzar un refresco cuando cambia la ruta
+    // Manejar cambios de ruta
     const refreshOnRouteChange = (): void => {
       setTimeout(() => {
         ScrollTrigger.refresh();
-        setupAnimations();
       }, 100);
     };
     
     window.addEventListener('popstate', refreshOnRouteChange);
     
-    // Next.js router events (opcionalmente puedes usar estos si estás usando el router de Next.js)
-    // Nota: Necesitarías importar useRouter de 'next/router' o 'next/navigation' según tu versión de Next.js
-    const handleRouteChangeComplete = (): void => {
-      setTimeout(() => {
-        ScrollTrigger.refresh(); 
-        setupAnimations();
-      }, 100);
-    };
-    
-    // Si estás usando Next.js, puedes descomentar esto y agregar la importación de useRouter
-    /*
-    const router = useRouter();
-    router.events.on('routeChangeComplete', handleRouteChangeComplete);
-    */
-    
-    // Función de limpieza
+    // Función de limpieza (useGSAP la maneja automáticamente, pero podemos limpiar eventos)
     return () => {
-      clearTimeout(initTimer);
       window.removeEventListener('resize', handleResize);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('popstate', refreshOnRouteChange);
-      
-      // Si estás usando Next.js router
-      /*
-      router.events.off('routeChangeComplete', handleRouteChangeComplete);
-      */
-      
-      // Limpiar todos los ScrollTriggers y animaciones GSAP
-      scrollTriggersRef.current.forEach((trigger: ScrollTrigger) => trigger.kill());
-      scrollTriggersRef.current = [];
-      
-      if (animationContextRef.current) {
-        animationContextRef.current.revert();
-        animationContextRef.current = null;
-      }
     };
-  }, []);
+  }, { scope: containerRef }); // Usar scope para mejor rendimiento
 
   // Función para renderizar el título con efecto de revelación de texto en 3 líneas
   const renderTitulo = (): JSX.Element => {
@@ -291,14 +230,14 @@ export default function Antagonik(): JSX.Element {
       <div 
         ref={backgroundRef} 
         className="absolute z-0 bg-gray-900 bg-opacity-50"
-        style={{ position: 'absolute' }} // Posición por defecto, se actualizará con JavaScript
+        style={{ position: 'absolute' }}
       />
       
       {/* Efecto persiana - Capa sobre el fondo */}
       <div 
         ref={persianaRef} 
         className="absolute z-5 overflow-hidden"
-        style={{ position: 'absolute' }} // Posición por defecto, se actualizará con JavaScript
+        style={{ position: 'absolute' }}
       >
         {createBlinds()}
       </div>
