@@ -50,7 +50,7 @@ const Proyectos: React.FC = () => {
       images: ["/images/proyectos/proyecto3.webp"],
       mobileImages: ["/images/proyectos/proyecto3-mobile.webp"],
       title: "LOGOFOLIO",
-      tags: ["Identidad visual", "Logo design"],
+      tags: ["Logo design"],
       year: "/2023",
       url: "https://www.behance.net/gallery/123418427/LOGOS-2021"
     },
@@ -151,58 +151,62 @@ const Proyectos: React.FC = () => {
       });
     });
 
-    // Configuración de parallax para imágenes
-    const parallaxImages = projectsContainerRef.current.querySelectorAll('.parallax-image-wrapper');
-    parallaxImages.forEach((wrapper) => {
-      const container = wrapper.closest('.parallax-container');
-      ScrollTrigger.create({
-        trigger: container as Element,
-        start: "top bottom",
-        end: "bottom top",
-        scrub: true,
-        invalidateOnRefresh: true,
-        animation: gsap.fromTo(
-          wrapper,
-          { y: "-35%" },
-          { y: "35%", ease: "none" }
-        )
+    // Configuración de parallax para imágenes - SOLO EN DESKTOP
+    if (!isMobile) {
+      const parallaxImages = projectsContainerRef.current.querySelectorAll('.parallax-image-wrapper');
+      parallaxImages.forEach((wrapper) => {
+        const container = wrapper.closest('.parallax-container');
+        ScrollTrigger.create({
+          trigger: container as Element,
+          start: "top bottom",
+          end: "bottom top",
+          scrub: true,
+          invalidateOnRefresh: true,
+          animation: gsap.fromTo(
+            wrapper,
+            { y: "-35%" },
+            { y: "35%", ease: "none" }
+          )
+        });
       });
-    });
+    }
 
-    // Configurar animaciones hover
-    const projectCards = projectsContainerRef.current.querySelectorAll('.project-card');
-    projectCards.forEach((card) => {
-      const image = card.querySelector('.project-image') as HTMLElement;
+    // Configurar animaciones hover - SOLO EN DESKTOP
+    if (!isMobile) {
+      const projectCards = projectsContainerRef.current.querySelectorAll('.project-card');
+      projectCards.forEach((card) => {
+        const image = card.querySelector('.project-image') as HTMLElement;
 
-      const handleMouseEnter = (): void => {
-        if (image) {
-          gsap.to(image, {
-            scale: 1.05,
-            duration: 0.8,
-            ease: "power2.out"
-          });
-        }
-      };
+        const handleMouseEnter = (): void => {
+          if (image) {
+            gsap.to(image, {
+              scale: 1.05,
+              duration: 0.8,
+              ease: "power2.out"
+            });
+          }
+        };
 
-      const handleMouseLeave = (): void => {
-        if (image) {
-          gsap.to(image, {
-            scale: 1,
-            duration: 0.8,
-            ease: "power2.out"
-          });
-        }
-      };
+        const handleMouseLeave = (): void => {
+          if (image) {
+            gsap.to(image, {
+              scale: 1,
+              duration: 0.8,
+              ease: "power2.out"
+            });
+          }
+        };
 
-      card.addEventListener('mouseenter', handleMouseEnter);
-      card.addEventListener('mouseleave', handleMouseLeave);
+        card.addEventListener('mouseenter', handleMouseEnter);
+        card.addEventListener('mouseleave', handleMouseLeave);
 
-      // Cleanup se maneja automáticamente por useGSAP
-      return () => {
-        card.removeEventListener('mouseenter', handleMouseEnter);
-        card.removeEventListener('mouseleave', handleMouseLeave);
-      };
-    });
+        // Cleanup se maneja automáticamente por useGSAP
+        return () => {
+          card.removeEventListener('mouseenter', handleMouseEnter);
+          card.removeEventListener('mouseleave', handleMouseLeave);
+        };
+      });
+    }
 
   }, { 
     scope: projectsContainerRef, 
@@ -494,10 +498,11 @@ const Proyectos: React.FC = () => {
             <div
               className="parallax-image-wrapper"
               style={{
-                height: "130%",
+                // En móvil, usar dimensiones normales sin parallax
+                height: isMobile ? "100%" : "130%",
                 width: "100%",
                 position: "absolute",
-                top: "-15%",
+                top: isMobile ? "0%" : "-15%",
                 left: 0,
               }}
             >
