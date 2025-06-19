@@ -228,7 +228,7 @@ const Navbar = () => {
           </li>
           <span>/</span>
           <li>
-            <Link href="/#perspectiva" className="inline-block group">
+            <Link href="/#visión" className="inline-block group">
               <SlideTextOnHover
                 originalText="VISIÓN"
                 hoverText="VISIÓN"
@@ -366,7 +366,7 @@ const Navbar = () => {
               <li className="w-full text-left py-2 overflow-hidden">
                 <div className="relative inline-flex items-center" ref={addToMenuItemsRef}>
                   <Link
-                    href="/#perspectiva"
+                    href="/#visión"
                     className="inline-block group"
                     onClick={handleLinkClick}
                   >
