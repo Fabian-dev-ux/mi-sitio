@@ -1,6 +1,7 @@
 "use client";
-import React, { useEffect, useRef, useLayoutEffect, useCallback, useMemo } from "react";
+import React, { useRef, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { useGSAP } from "@gsap/react";
 import Encabezado from "./Encabezado";
 import { gsap, ScrollTrigger } from "@/lib/gsapInit";
 import Lottie, { AnimationItem } from "lottie-web";
@@ -17,18 +18,18 @@ interface CardData {
   tags: string[];
 }
 
-// Constantes extraídas para evitar re-creación
+// Constantes
 const SYNC_FPS = 60;
 const SYNC_INTERVAL = 1000 / SYNC_FPS;
 const ANIMATION_OVERLAP = 1200;
 const MIN_ANIMATION_DELAY = 500;
 const INITIAL_PLAY_DELAY = 1000;
-const SETUP_DELAY = 100;
 
 const Servicios: React.FC = () => {
   const router = useRouter();
   
-  // Referencias optimizadas con inicialización lazy
+  // Referencias optimizadas
+  const containerRef = useRef<HTMLDivElement>(null);
   const cardsRef = useRef<(HTMLDivElement | null)[]>([]);
   const lottieRefs = useRef<(HTMLDivElement | null)[]>([]);
   const lottieBlackRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -36,21 +37,17 @@ const Servicios: React.FC = () => {
   const lottieBlackInstances = useRef<(AnimationItem | null)[]>([]);
   const animationDurations = useRef<number[]>([]);
   const currentPlayingIndex = useRef<number | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
   const hoverStates = useRef<boolean[]>([]);
-  const syncIntervals = useRef<(NodeJS.Timeout | null)[]>([]);
-  const scrollTriggersRef = useRef<ScrollTrigger[]>([]);
-  const animationContextRef = useRef<gsap.Context | null>(null);
   const sequenceIndexRef = useRef<number>(0);
   
-  // Referencias para timeouts y RAF para mejor limpieza
+  // Referencias para cleanup
   const timeoutsRef = useRef<Set<NodeJS.Timeout>>(new Set());
   const rafIdsRef = useRef<Set<number>>(new Set());
 
-  // Secuencia de animaciones como constante
+  // Secuencia de animaciones
   const animationSequence = useMemo(() => [1, 2, 0], []);
 
-  // Datos de las cards memoizados para evitar re-renderizado
+  // Datos de las cards
   const cardsData: CardData[] = useMemo(() => [
     {
       iconPath: "/images/lottie/web.json",
@@ -84,7 +81,7 @@ const Servicios: React.FC = () => {
     },
   ], []);
 
-  // Función optimizada con useCallback para evitar re-creación
+  // Funciones de utilidad
   const clearTimeouts = useCallback(() => {
     timeoutsRef.current.forEach(timeout => clearTimeout(timeout));
     timeoutsRef.current.clear();
@@ -95,12 +92,8 @@ const Servicios: React.FC = () => {
     rafIdsRef.current.clear();
   }, []);
 
-  // Función optimizada para sincronización usando RAF en lugar de setInterval
+  // Función para sincronización con RAF
   const startSyncInterval = useCallback((index: number) => {
-    if (syncIntervals.current[index]) {
-      clearInterval(syncIntervals.current[index]!);
-    }
-
     let lastTime = 0;
     const syncFrame = (currentTime: number) => {
       if (currentTime - lastTime >= SYNC_INTERVAL) {
@@ -123,14 +116,7 @@ const Servicios: React.FC = () => {
     rafIdsRef.current.add(rafId);
   }, []);
 
-  const stopSyncInterval = useCallback((index: number) => {
-    if (syncIntervals.current[index]) {
-      clearInterval(syncIntervals.current[index]!);
-      syncIntervals.current[index] = null;
-    }
-  }, []);
-
-  // Función optimizada para toggle de colores
+  // Toggle de colores Lottie
   const toggleLottieColor = useCallback((index: number, showBlack: boolean) => {
     const normalContainer = lottieRefs.current[index];
     const blackContainer = lottieBlackRefs.current[index];
@@ -153,16 +139,15 @@ const Servicios: React.FC = () => {
     } else {
       gsap.to(blackContainer, { opacity: 0, duration: 0.3, ease: "power2.out" });
       gsap.to(normalContainer, { opacity: 1, duration: 0.3, ease: "power2.out" });
-      stopSyncInterval(index);
     }
-  }, [startSyncInterval, stopSyncInterval]);
+  }, [startSyncInterval]);
 
-  // Función memoizada para navegación
+  // Navegación
   const handleServiceClick = useCallback(() => {
     router.push('/contacto');
   }, [router]);
 
-  // Función optimizada para reproducir animaciones
+  // Reproducir animaciones
   const playAnimation = useCallback((index: number) => {
     const normalInstance = lottieInstances.current[index];
     const blackInstance = lottieBlackInstances.current[index];
@@ -189,8 +174,9 @@ const Servicios: React.FC = () => {
     playAnimation(nextIndex);
   }, [animationSequence, playAnimation]);
 
-  // Función optimizada para cleanup de Lottie
-  const cleanupLottieInstances = useCallback(() => {
+  // Inicialización de Lottie
+  const initLottieAnimations = useCallback(() => {
+    // Limpiar instancias previas
     [...lottieInstances.current, ...lottieBlackInstances.current].forEach(instance => {
       if (instance) {
         try {
@@ -201,19 +187,8 @@ const Servicios: React.FC = () => {
       }
     });
     
-    syncIntervals.current.forEach(interval => {
-      if (interval) clearInterval(interval);
-    });
-    
     lottieInstances.current = [];
     lottieBlackInstances.current = [];
-    syncIntervals.current = [];
-    hoverStates.current = [];
-  }, []);
-
-  // Función de inicialización de Lottie optimizada
-  const initLottieAnimations = useCallback(() => {
-    cleanupLottieInstances();
 
     // Inicializar animaciones normales
     lottieRefs.current.forEach((container, index) => {
@@ -221,7 +196,6 @@ const Servicios: React.FC = () => {
 
       const cardData = cardsData[index];
       hoverStates.current[index] = false;
-      syncIntervals.current[index] = null;
 
       const normalAnimation = Lottie.loadAnimation({
         container: container,
@@ -263,9 +237,9 @@ const Servicios: React.FC = () => {
       lottieBlackInstances.current[index] = blackAnimation;
       gsap.set(container, { opacity: 0 });
     });
-  }, [cardsData, animationSequence, playAnimation, cleanupLottieInstances]);
+  }, [cardsData, animationSequence, playAnimation]);
 
-  // Función para crear contenedores de palabras del título (memoizada)
+  // Crear contenedores de palabras del título
   const createTitleWordContainers = useCallback((title: string) => {
     return title.split(" ").map((word, index) => (
       <span key={index} className="title-word-container inline-block overflow-hidden mr-1">
@@ -274,268 +248,186 @@ const Servicios: React.FC = () => {
     ));
   }, []);
 
-  // Función de setup de animaciones optimizada
-  const setupAnimations = useCallback(() => {
-    // Limpiar ScrollTriggers y contexto previo
-    scrollTriggersRef.current.forEach(trigger => trigger.kill());
-    scrollTriggersRef.current = [];
+  // useGSAP hook - Reemplaza useLayoutEffect y maneja cleanup automáticamente
+  useGSAP(() => {
+    if (!containerRef.current) return;
 
-    if (animationContextRef.current) {
-      animationContextRef.current.revert();
-    }
-
+    // Inicializar Lottie
     initLottieAnimations();
 
-    // Crear nuevo contexto de animación
-    animationContextRef.current = gsap.context(() => {
-      if (!containerRef.current) return;
+    // Configurar animaciones para cada card
+    cardsRef.current.forEach((card, index) => {
+      if (!card) return;
 
-      cardsRef.current.forEach((card, index) => {
-        if (!card) return;
+      // Seleccionar elementos
+      const elements = {
+        topBorder: card.querySelector<HTMLElement>(".border-top"),
+        bottomBorder: card.querySelector<HTMLElement>(".border-bottom"),
+        leftBorder: card.querySelector<HTMLElement>(".border-left"),
+        rightBorder: card.querySelector<HTMLElement>(".border-right"),
+        content: card.querySelectorAll<HTMLElement>(".card-desc, .card-tags span, .card-number, .card-icon"),
+        titleContainers: card.querySelectorAll<HTMLElement>(".title-word-container"),
+        bgOverlay: card.querySelector<HTMLElement>(".bg-overlay"),
+        titleWords: card.querySelectorAll<HTMLElement>(".title-word"),
+        descText: card.querySelector<HTMLElement>(".card-desc"),
+        numberText: card.querySelector<HTMLElement>(".card-number"),
+        tags: card.querySelectorAll<HTMLElement>(".card-tags span")
+      };
 
-        // Seleccionar elementos una sola vez
-        const elements = {
-          topBorder: card.querySelector<HTMLElement>(".border-top"),
-          bottomBorder: card.querySelector<HTMLElement>(".border-bottom"),
-          leftBorder: card.querySelector<HTMLElement>(".border-left"),
-          rightBorder: card.querySelector<HTMLElement>(".border-right"),
-          content: card.querySelectorAll<HTMLElement>(".card-desc, .card-tags span, .card-number, .card-icon"),
-          titleContainers: card.querySelectorAll<HTMLElement>(".title-word-container"),
-          bgOverlay: card.querySelector<HTMLElement>(".bg-overlay"),
-          titleWords: card.querySelectorAll<HTMLElement>(".title-word"),
-          descText: card.querySelector<HTMLElement>(".card-desc"),
-          numberText: card.querySelector<HTMLElement>(".card-number"),
-          tags: card.querySelectorAll<HTMLElement>(".card-tags span")
-        };
+      // Estados iniciales
+      gsap.set(elements.topBorder, { scaleX: 0, opacity: 0 });
+      gsap.set(elements.bottomBorder, { scaleX: 0, opacity: 0 });
+      if (elements.leftBorder) gsap.set(elements.leftBorder, { scaleY: 0, opacity: 0 });
+      gsap.set(elements.rightBorder, { scaleY: 0, opacity: 0 });
 
-        // Establecer estados iniciales
-        gsap.set(elements.topBorder, { scaleX: 0, opacity: 0 });
-        gsap.set(elements.bottomBorder, { scaleX: 0, opacity: 0 });
-        if (elements.leftBorder) gsap.set(elements.leftBorder, { scaleY: 0, opacity: 0 });
-        gsap.set(elements.rightBorder, { scaleY: 0, opacity: 0 });
-
-        elements.titleContainers.forEach(container => {
-          const word = container.querySelector<HTMLElement>(".title-word");
-          if (word) gsap.set(word, { y: "100%", opacity: 0 });
-        });
-
-        gsap.set(elements.content, { opacity: 0, y: 20 });
-
-        // Crear ScrollTrigger optimizado
-        const trigger = ScrollTrigger.create({
-          trigger: card,
-          start: "top 80%",
-          onEnter: () => {
-            // Animar bordes
-            gsap.to(elements.topBorder, { scaleX: 0.95, opacity: 1, duration: 0.6, ease: "power2.out" });
-            gsap.to(elements.bottomBorder, { scaleX: 0.95, opacity: 1, duration: 0.6, ease: "power2.out" });
-            if (elements.leftBorder) gsap.to(elements.leftBorder, { scaleY: 0.95, opacity: 1, duration: 0.6, ease: "power2.out" });
-            gsap.to(elements.rightBorder, { scaleY: 0.95, opacity: 1, duration: 0.6, ease: "power2.out" });
-
-            // Animar título
-            elements.titleContainers.forEach((container) => {
-              const word = container.querySelector<HTMLElement>(".title-word");
-              if (!word) return;
-
-              gsap.to(word, {
-                y: "0%",
-                opacity: 1,
-                duration: 0.7,
-                ease: "power3.out",
-                delay: 0.03
-              });
-            });
-
-            // Animar contenido
-            gsap.to(elements.content, {
-              opacity: 1,
-              y: 0,
-              duration: 0.6,
-              ease: "power2.out",
-              stagger: 0.03,
-              delay: 0.06
-            });
-          },
-          onLeaveBack: () => {
-            gsap.to(elements.topBorder, { scaleX: 0, opacity: 0, duration: 0.4 });
-            gsap.to(elements.bottomBorder, { scaleX: 0, opacity: 0, duration: 0.4 });
-            if (elements.leftBorder) gsap.to(elements.leftBorder, { scaleY: 0, opacity: 0, duration: 0.4 });
-            gsap.to(elements.rightBorder, { scaleY: 0, opacity: 0, duration: 0.4 });
-
-            elements.titleContainers.forEach(container => {
-              const word = container.querySelector<HTMLElement>(".title-word");
-              if (word) gsap.to(word, { y: "100%", opacity: 0, duration: 0.4 });
-            });
-
-            gsap.to(elements.content, { opacity: 0, y: 20, duration: 0.4 });
-          }
-        });
-
-        scrollTriggersRef.current.push(trigger);
-
-        // Event handlers optimizados con funciones reutilizables
-        const onEnter = () => {
-          if (!elements.bgOverlay) return;
-
-          gsap.to(elements.bgOverlay, {
-            opacity: 1,
-            scale: 1,
-            duration: 0.5,
-            ease: "power3.out"
-          });
-
-          if (elements.descText && elements.numberText) {
-            gsap.to([...Array.from(elements.titleWords), elements.descText, elements.numberText], {
-              color: "#000000",
-              duration: 0.4,
-              ease: "power2.out"
-            });
-          }
-
-          gsap.to(Array.from(elements.tags), {
-            color: "#000000",
-            borderColor: "#000000",
-            duration: 0.4,
-            ease: "power2.out"
-          });
-
-          toggleLottieColor(index, true);
-        };
-
-        const onLeave = () => {
-          if (!elements.bgOverlay) return;
-
-          gsap.to(elements.bgOverlay, {
-            opacity: 0,
-            scale: 0.9,
-            duration: 0.5,
-            ease: "power3.out"
-          });
-
-          gsap.to(Array.from(elements.titleWords), {
-            color: "#b6bcc7",
-            duration: 0.4,
-            ease: "power2.out"
-          });
-
-          if (elements.descText && elements.numberText) {
-            gsap.to([elements.descText], {
-              color: "#B6BCC7",
-              duration: 0.4,
-              ease: "power2.out"
-            });
-
-            gsap.to(elements.numberText, {
-              color: "#565A63",
-              duration: 0.4,
-              ease: "power2.out"
-            });
-          }
-
-          gsap.to(Array.from(elements.tags), {
-            color: "#565A63",
-            borderColor: "#2D3036",
-            duration: 0.4,
-            ease: "power2.out"
-          });
-
-          toggleLottieColor(index, false);
-        };
-
-        // Configurar event listeners una sola vez
-        card.addEventListener("mouseenter", onEnter);
-        card.addEventListener("mouseleave", onLeave);
-        card.addEventListener("click", handleServiceClick);
+      elements.titleContainers.forEach(container => {
+        const word = container.querySelector<HTMLElement>(".title-word");
+        if (word) gsap.set(word, { y: "100%", opacity: 0 });
       });
+
+      gsap.set(elements.content, { opacity: 0, y: 20 });
+
+      // ScrollTrigger
+      ScrollTrigger.create({
+        trigger: card,
+        start: "top 80%",
+        onEnter: () => {
+          // Animar bordes
+          gsap.to(elements.topBorder, { scaleX: 0.95, opacity: 1, duration: 0.6, ease: "power2.out" });
+          gsap.to(elements.bottomBorder, { scaleX: 0.95, opacity: 1, duration: 0.6, ease: "power2.out" });
+          if (elements.leftBorder) gsap.to(elements.leftBorder, { scaleY: 0.95, opacity: 1, duration: 0.6, ease: "power2.out" });
+          gsap.to(elements.rightBorder, { scaleY: 0.95, opacity: 1, duration: 0.6, ease: "power2.out" });
+
+          // Animar título
+          elements.titleContainers.forEach((container) => {
+            const word = container.querySelector<HTMLElement>(".title-word");
+            if (!word) return;
+
+            gsap.to(word, {
+              y: "0%",
+              opacity: 1,
+              duration: 0.7,
+              ease: "power3.out",
+              delay: 0.03
+            });
+          });
+
+          // Animar contenido
+          gsap.to(elements.content, {
+            opacity: 1,
+            y: 0,
+            duration: 0.6,
+            ease: "power2.out",
+            stagger: 0.03,
+            delay: 0.06
+          });
+        },
+        onLeaveBack: () => {
+          gsap.to(elements.topBorder, { scaleX: 0, opacity: 0, duration: 0.4 });
+          gsap.to(elements.bottomBorder, { scaleX: 0, opacity: 0, duration: 0.4 });
+          if (elements.leftBorder) gsap.to(elements.leftBorder, { scaleY: 0, opacity: 0, duration: 0.4 });
+          gsap.to(elements.rightBorder, { scaleY: 0, opacity: 0, duration: 0.4 });
+
+          elements.titleContainers.forEach(container => {
+            const word = container.querySelector<HTMLElement>(".title-word");
+            if (word) gsap.to(word, { y: "100%", opacity: 0, duration: 0.4 });
+          });
+
+          gsap.to(elements.content, { opacity: 0, y: 20, duration: 0.4 });
+        }
+      });
+
+      // Event handlers para hover
+      const onEnter = () => {
+        if (!elements.bgOverlay) return;
+
+        gsap.to(elements.bgOverlay, {
+          opacity: 1,
+          scale: 1,
+          duration: 0.5,
+          ease: "power3.out"
+        });
+
+        if (elements.descText && elements.numberText) {
+          gsap.to([...Array.from(elements.titleWords), elements.descText, elements.numberText], {
+            color: "#000000",
+            duration: 0.4,
+            ease: "power2.out"
+          });
+        }
+
+        gsap.to(Array.from(elements.tags), {
+          color: "#000000",
+          borderColor: "#000000",
+          duration: 0.4,
+          ease: "power2.out"
+        });
+
+        toggleLottieColor(index, true);
+      };
+
+      const onLeave = () => {
+        if (!elements.bgOverlay) return;
+
+        gsap.to(elements.bgOverlay, {
+          opacity: 0,
+          scale: 0.9,
+          duration: 0.5,
+          ease: "power3.out"
+        });
+
+        gsap.to(Array.from(elements.titleWords), {
+          color: "#b6bcc7",
+          duration: 0.4,
+          ease: "power2.out"
+        });
+
+        if (elements.descText && elements.numberText) {
+          gsap.to([elements.descText], {
+            color: "#B6BCC7",
+            duration: 0.4,
+            ease: "power2.out"
+          });
+
+          gsap.to(elements.numberText, {
+            color: "#565A63",
+            duration: 0.4,
+            ease: "power2.out"
+          });
+        }
+
+        gsap.to(Array.from(elements.tags), {
+          color: "#565A63",
+          borderColor: "#2D3036",
+          duration: 0.4,
+          ease: "power2.out"
+        });
+
+        toggleLottieColor(index, false);
+      };
+
+      // Event listeners
+      card.addEventListener("mouseenter", onEnter);
+      card.addEventListener("mouseleave", onLeave);
+      card.addEventListener("click", handleServiceClick);
     });
-  }, [initLottieAnimations, toggleLottieColor, handleServiceClick]);
 
-  // useLayoutEffect optimizado
-  useLayoutEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const initTimer = setTimeout(() => {
-      setupAnimations();
-    }, SETUP_DELAY);
-
-    timeoutsRef.current.add(initTimer);
-
+    // Cleanup automático manejado por useGSAP
     return () => {
-      clearTimeout(initTimer);
-      timeoutsRef.current.delete(initTimer);
-    };
-  }, [setupAnimations]);
-
-  // Cleanup effect optimizado
-  useEffect(() => {
-    return () => {
-      // Limpiar timeouts y RAFs
       clearTimeouts();
       clearRAFs();
       
-      // Limpiar ScrollTriggers
-      scrollTriggersRef.current.forEach(trigger => trigger.kill());
-      scrollTriggersRef.current = [];
-
-      // Limpiar intervalos de sincronización
-      syncIntervals.current.forEach(interval => {
-        if (interval) clearInterval(interval);
+      [...lottieInstances.current, ...lottieBlackInstances.current].forEach(instance => {
+        if (instance) {
+          try {
+            instance.destroy();
+          } catch (err) {
+            console.error("Error cleaning up Lottie instance:", err);
+          }
+        }
       });
-
-      // Limpiar contexto de animación
-      if (animationContextRef.current) {
-        animationContextRef.current.revert();
-        animationContextRef.current = null;
-      }
-
-      // Limpiar instancias de Lottie
-      cleanupLottieInstances();
     };
-  }, [clearTimeouts, clearRAFs, cleanupLottieInstances]);
-
-  // Event listeners optimizados con throttling
-  useEffect(() => {
-    let refreshTimeout: NodeJS.Timeout;
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        clearTimeout(refreshTimeout);
-        refreshTimeout = setTimeout(() => {
-          ScrollTrigger.refresh();
-          setupAnimations();
-        }, 100);
-        timeoutsRef.current.add(refreshTimeout);
-      }
-    };
-
-    const refreshOnRouteChange = () => {
-      clearTimeout(refreshTimeout);
-      refreshTimeout = setTimeout(() => {
-        ScrollTrigger.refresh();
-        setupAnimations();
-      }, 100);
-      timeoutsRef.current.add(refreshTimeout);
-    };
-
-    const handlePageShow = () => {
-      clearTimeout(refreshTimeout);
-      refreshTimeout = setTimeout(() => {
-        setupAnimations();
-      }, 100);
-      timeoutsRef.current.add(refreshTimeout);
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange, { passive: true });
-    window.addEventListener('pageshow', handlePageShow, { passive: true });
-    window.addEventListener('popstate', refreshOnRouteChange, { passive: true });
-
-    return () => {
-      clearTimeout(refreshTimeout);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('pageshow', handlePageShow);
-      window.removeEventListener('popstate', refreshOnRouteChange);
-    };
-  }, [setupAnimations, clearTimeouts]);
+  }, { scope: containerRef, dependencies: [cardsData] });
 
   return (
     <section ref={containerRef} className="bg-dark text-white w-full pb-2 px-4 md:px-6 lg:px-8 xl:px-10 2xl:px-20 pt-10 md:pt-16 lg:pt-20 2xl:pt-32" id="servicios">
