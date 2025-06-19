@@ -142,37 +142,30 @@ const Footer = () => {
               <h3 className="text-sm uppercase font-normal font-archivo mb-6 text-dark">Navegación</h3>
               <ul className="mb-0 font-archivo text-base uppercase">
                 <li className="leading-tight mb-0">
-                  <Link href="/" className="inline-block group">
-                    <span className="relative overflow-hidden inline-block">
-                      <SlideTextOnHover originalText="/ INICIO" hoverText="/ INICIO" />
-                    </span>
-                  </Link>
-                </li>
-                <li className="leading-tight mb-0">
-                  <Link href="/services" className="inline-block group">
+                  <Link href="/#servicios" className="inline-block group">
                     <span className="relative overflow-hidden inline-block">
                       <SlideTextOnHover originalText="/ SERVICIOS" hoverText="/ SERVICIOS" />
                     </span>
                   </Link>
                 </li>
                 <li className="leading-tight mb-0">
-                  <Link href="/proyectos" className="inline-block group">
+                  <Link href="/#proyectos" className="inline-block group">
                     <span className="relative overflow-hidden inline-block">
                       <SlideTextOnHover originalText="/ PROYECTOS" hoverText="/ PROYECTOS" />
                     </span>
                   </Link>
                 </li>
                 <li className="leading-tight mb-0">
-                  <Link href="/aproach" className="inline-block group">
+                  <Link href="/#proceso" className="inline-block group">
                     <span className="relative overflow-hidden inline-block">
                       <SlideTextOnHover originalText="/ PROCESO" hoverText="/ PROCESO" />
                     </span>
                   </Link>
                 </li>
                 <li className="leading-tight mb-0.5">
-                  <Link href="/perspective" className="inline-block group">
+                  <Link href="/#visión" className="inline-block group">
                     <span className="relative overflow-hidden inline-block">
-                      <SlideTextOnHover originalText="/ PERSPECTIVA" hoverText="/ PERSPECTIVA" />
+                      <SlideTextOnHover originalText="/ VISIÓN" hoverText="/ VISIÓN" />
                     </span>
                   </Link>
                 </li>
