@@ -3,8 +3,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { gsap, ScrollTrigger } from '@/lib/gsapInit';
 
 const VideoReel = () => {
-  const sectionRef = useRef(null);
-  const videoRef = useRef(null);
+  const sectionRef = useRef<HTMLElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [videoSources, setVideoSources] = useState({ webm: '', mp4: '' });
 
