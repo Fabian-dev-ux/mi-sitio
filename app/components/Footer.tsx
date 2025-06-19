@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useRef } from 'react';
 import { gsap, ScrollTrigger } from '@/lib/gsapInit';
+import { useGSAP } from "@gsap/react";
 import Link from 'next/link';
 import Image from 'next/image';
 import { FaInstagram, FaFacebookF, FaLinkedinIn } from 'react-icons/fa';
@@ -10,9 +11,9 @@ import MagneticButton from './MagneticButton';
 
 const Footer = () => {
   const footerRef = useRef(null);
-  const parallaxTargetRef = useRef(null); // Referencia específica al div mx-auto w-full
+  const parallaxTargetRef = useRef(null);
 
-  useEffect(() => {
+  useGSAP(() => {
     // Animación para el efecto Parallax aplicada solo al div específico mx-auto w-full
     const tl = gsap.timeline({
       scrollTrigger: {
@@ -29,16 +30,7 @@ const Footer = () => {
       { y: "-75%" }, 
       { y: "75%", ease: "none" }
     );
-
-    return () => {
-      // Limpiar ScrollTriggers para evitar duplicados
-      ScrollTrigger.getAll().forEach(trigger => {
-        if (trigger.vars.trigger === footerRef.current) {
-          trigger.kill();
-        }
-      });
-    };
-  }, []);
+  }, { scope: footerRef }); // Scope para limitar la animación al footer
 
   return (
     <footer ref={footerRef} className="bg-primary text-dark w-full relative">
