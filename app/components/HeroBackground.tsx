@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, Suspense, useEffect, useState, useMemo, ReactNode, useCallback } from 'react';
+import React, { useRef, Suspense, useEffect, useState, useMemo, useCallback } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import {
   OrbitControls,
@@ -19,7 +19,7 @@ import {
   Material
 } from 'three';
 
-// Throttle utility para event listeners
+// Utilidades optimizadas
 const throttle = (func: Function, limit: number) => {
   let inThrottle: boolean;
   return function(this: any, ...args: any[]) {
@@ -31,7 +31,6 @@ const throttle = (func: Function, limit: number) => {
   }
 };
 
-// Debounce para resize events
 const debounce = (func: Function, wait: number) => {
   let timeout: NodeJS.Timeout;
   return function(this: any, ...args: any[]) {
@@ -40,22 +39,34 @@ const debounce = (func: Function, wait: number) => {
   };
 };
 
-// Definición de tipos para las configuraciones de malla
-interface MeshConfig {
-  desktop: {
-    positionOffset: [number, number, number];
-    scaleMultiplier: [number, number, number];
-    rotation: { x: number; y: number; z: number };
-  };
-  mobile: {
-    positionOffset: [number, number, number];
-    scaleMultiplier: [number, number, number];
-    visible: boolean;
-    rotation: { x: number; y: number; z: number };
-  };
+// Tipos optimizados - FIXED
+interface BaseMeshConfig {
+  positionOffset: [number, number, number];
+  scaleMultiplier: [number, number, number];
+  rotation: { x: number; y: number; z: number };
 }
 
-// Hook personalizado para configuraciones de malla
+interface DesktopMeshConfig extends BaseMeshConfig {}
+
+interface MobileMeshConfig extends BaseMeshConfig {
+  visible: boolean;
+}
+
+interface MeshConfig {
+  desktop: DesktopMeshConfig;
+  mobile: MobileMeshConfig;
+}
+
+interface OptimizedMeshData {
+  mesh: Mesh;
+  originalPosition: Vector3;
+  originalScale: Vector3;
+  originalRotation: Euler;
+  config: MeshConfig;
+  index: number;
+}
+
+// Hook optimizado para configuraciones
 const useMeshConfigs = (): MeshConfig[] => {
   return useMemo<MeshConfig[]>(() => [
     {
@@ -126,237 +137,222 @@ const useMeshConfigs = (): MeshConfig[] => {
   ], []);
 };
 
-// Model component optimizado para mobile
+// Model component optimizado
 function Model() {
   const gltf = useGLTF('/models/break.glb');
   const groupRef = useRef<Group>(null);
   const materialRef = useRef<any>(null);
-  const [meshes, setMeshes] = useState<Mesh[]>([]);
+  
+  // Estado optimizado con menos re-renders
+  const [optimizedMeshData, setOptimizedMeshData] = useState<OptimizedMeshData[]>([]);
   const [initialized, setInitialized] = useState(false);
-
-  // Estados con throttling - solo mouse para desktop, solo scroll para mobile
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [scrollProgress, setScrollProgress] = useState(0);
 
-  // Get viewport dimensions and determine if mobile
   const { viewport, size } = useThree();
-  const isMobile = size.width < 640;
-
-  // Usar hook personalizado para configuraciones
+  const isMobile = useMemo(() => size.width < 640, [size.width]);
   const meshConfigs = useMeshConfigs();
 
-  // Store original mesh data for restoration
-  const originalMeshData = useRef<{
-    mesh: Mesh;
-    position: Vector3;
-    scale: Vector3;
-    rotation: Euler;
-  }[]>([]);
+  // Pre-cálculos memoizados para evitar cálculos en useFrame
+  const animationConstants = useMemo(() => ({
+    mouseInfluenceDesktop: 0.15,
+    rotationLerpFactor: 0.05,
+    mouseRotationLerpFactor: 0.1,
+    scrollZBaseFactor: 30,
+    scrollZIncrementFactor: 4,
+    scrollDispersionBaseFactor: 4,
+    scrollScaleFactor: 1.2
+  }), []);
 
-  // Callbacks memoizados para event listeners - SOLO para desktop
+  // Optimización: Callbacks memoizados con dependencias correctas
   const updateMousePosition = useCallback(
     throttle((e: MouseEvent) => {
-      if (isMobile) return; // Skip en mobile
+      if (isMobile) return;
       setMousePosition({
         x: (e.clientX / window.innerWidth) * 2 - 1,
         y: -((e.clientY / window.innerHeight) * 2 - 1)
       });
-    }, 16), // ~60fps
+    }, 16),
     [isMobile]
   );
 
-  // Callback de scroll - SOLO para desktop
   const updateScrollProgress = useCallback(
     throttle(() => {
-      if (isMobile) return; // Skip en mobile
+      if (isMobile) return;
       const scrollTop = window.scrollY;
       const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
-      const progress = Math.min(Math.max(scrollTop / scrollHeight, 0), 1);
+      const progress = scrollHeight > 0 ? Math.min(Math.max(scrollTop / scrollHeight, 0), 1) : 0;
       setScrollProgress(progress);
-    }, 16), // ~60fps
+    }, 16),
     [isMobile]
   );
 
-  // Initialize meshes and apply material
+  // Inicialización optimizada con cleanup
   useEffect(() => {
-    if (gltf.scene && materialRef.current) {
-      const foundMeshes: Mesh[] = [];
+    if (!gltf.scene || !materialRef.current) return;
 
-      // Get all meshes and apply material
-      gltf.scene.traverse((child: Object3D) => {
-        if ((child as Mesh).isMesh) {
-          const mesh = child as Mesh;
-          // Store original data in a ref to maintain across renders
-          originalMeshData.current.push({
-            mesh,
-            position: mesh.position.clone(),
-            scale: mesh.scale.clone(),
-            rotation: mesh.rotation.clone()
-          });
+    const meshDataArray: OptimizedMeshData[] = [];
+    let meshIndex = 0;
 
-          // Apply material
-          mesh.material = materialRef.current!;
-          foundMeshes.push(mesh);
-        }
-      });
+    gltf.scene.traverse((child: Object3D) => {
+      if ((child as Mesh).isMesh && meshIndex < meshConfigs.length) {
+        const mesh = child as Mesh;
+        
+        // Almacenar datos optimizados
+        meshDataArray.push({
+          mesh,
+          originalPosition: mesh.position.clone(),
+          originalScale: mesh.scale.clone(),
+          originalRotation: mesh.rotation.clone(),
+          config: meshConfigs[meshIndex],
+          index: meshIndex
+        });
 
-      // Keep only up to 5 meshes
-      setMeshes(foundMeshes.slice(0, Math.min(5, foundMeshes.length)));
-      setInitialized(true);
-    }
+        mesh.material = materialRef.current;
+        meshIndex++;
+      }
+    });
 
-    // Cleanup function to restore original positions and scales
+    setOptimizedMeshData(meshDataArray);
+    setInitialized(true);
+
+    // Cleanup mejorado
     return () => {
-      if (originalMeshData.current.length > 0) {
-        originalMeshData.current.forEach(data => {
-          data.mesh.position.copy(data.position);
-          data.mesh.scale.copy(data.scale);
-          data.mesh.rotation.copy(data.rotation);
-        });
-      }
+      meshDataArray.forEach(data => {
+        data.mesh.position.copy(data.originalPosition);
+        data.mesh.scale.copy(data.originalScale);
+        data.mesh.rotation.copy(data.originalRotation);
+      });
     };
-  }, [gltf.scene]);
+  }, [gltf.scene, meshConfigs]);
 
-  // Reset meshes to original position when component unmounts or page changes
+  // Event listeners optimizados
   useEffect(() => {
-    // Function to reset all meshes to their original positions
-    const resetMeshes = () => {
-      if (originalMeshData.current.length > 0) {
-        originalMeshData.current.forEach(data => {
-          data.mesh.position.copy(data.position);
-          data.mesh.scale.copy(data.scale);
-          data.mesh.rotation.copy(data.rotation);
-        });
-      }
+    if (isMobile) return;
+
+    const cleanup = () => {
+      window.removeEventListener('mousemove', updateMousePosition);
+      window.removeEventListener('scroll', updateScrollProgress);
     };
 
-    // Add event listeners for page visibility changes
-    document.addEventListener('visibilitychange', resetMeshes);
+    window.addEventListener('mousemove', updateMousePosition, { passive: true });
+    window.addEventListener('scroll', updateScrollProgress, { passive: true });
+
+    return cleanup;
+  }, [updateMousePosition, updateScrollProgress, isMobile]);
+
+  // Reset optimizado
+  useEffect(() => {
+    const resetMeshes = () => {
+      optimizedMeshData.forEach(data => {
+        data.mesh.position.copy(data.originalPosition);
+        data.mesh.scale.copy(data.originalScale);
+        data.mesh.rotation.copy(data.originalRotation);
+      });
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) resetMeshes();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('beforeunload', resetMeshes);
 
-    // Cleanup event listeners
     return () => {
-      document.removeEventListener('visibilitychange', resetMeshes);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('beforeunload', resetMeshes);
       resetMeshes();
     };
-  }, []);
+  }, [optimizedMeshData]);
 
-  // Event listeners optimizados - SOLO para desktop
-  useEffect(() => {
-    if (!isMobile) {
-      window.addEventListener('mousemove', updateMousePosition);
-      return () => window.removeEventListener('mousemove', updateMousePosition);
-    }
-  }, [updateMousePosition, isMobile]);
-
-  useEffect(() => {
-    if (!isMobile) {
-      updateScrollProgress();
-      window.addEventListener('scroll', updateScrollProgress);
-      return () => window.removeEventListener('scroll', updateScrollProgress);
-    }
-  }, [updateScrollProgress, isMobile]);
-
-  // Animation loop optimizado - lógica separada para mobile vs desktop
+  // Loop de animación super optimizado - FIXED
   useFrame(() => {
-    if (!initialized || meshes.length === 0) return;
+    if (!initialized || optimizedMeshData.length === 0) return;
 
-    // Animate each mesh
-    meshes.forEach((mesh, index) => {
-      if (!mesh || index >= meshConfigs.length) return;
+    // Batch todas las operaciones para reducir reflows
+    optimizedMeshData.forEach((data) => {
+      const { mesh, originalPosition, originalScale, config, index } = data;
+      const activeConfig = isMobile ? config.mobile : config.desktop;
 
-      // Get the appropriate config based on device
-      const config = isMobile ? meshConfigs[index].mobile : meshConfigs[index].desktop;
-
-      // Set visibility for mobile
+      // Handle visibility properly for mobile/desktop - FIXED
       if (isMobile) {
-        const mobileConfig = config as MeshConfig['mobile'];
-        mesh.visible = mobileConfig.visible;
+        mesh.visible = config.mobile.visible; // Use specific mobile config
         if (!mesh.visible) return;
       } else {
-        mesh.visible = true;
+        mesh.visible = true; // All meshes visible on desktop
       }
 
-      // Get original values from the stored ref
-      const originalData = originalMeshData.current.find(data => data.mesh === mesh);
-      if (!originalData) return;
+      const { rotation: rotConfig } = activeConfig;
 
-      const origPos = originalData.position;
-      const origScale = originalData.scale;
-
-      // Get rotation config based on device
-      const rotationConfig = config.rotation;
-
-      // Apply automatic rotation for all devices
-      mesh.rotation.x += rotationConfig.x;
-      mesh.rotation.y += rotationConfig.y;
-      mesh.rotation.z += rotationConfig.z;
+      // Rotación automática (siempre)
+      mesh.rotation.x += rotConfig.x;
+      mesh.rotation.y += rotConfig.y;
+      mesh.rotation.z += rotConfig.z;
 
       if (isMobile) {
-        // ===== MOBILE: Solo rotación automática, posición y escala fijas =====
+        // Mobile: Solo posición y escala fijas
         mesh.position.set(
-          origPos.x + config.positionOffset[0],
-          origPos.y + config.positionOffset[1],
-          origPos.z + config.positionOffset[2]
+          originalPosition.x + activeConfig.positionOffset[0],
+          originalPosition.y + activeConfig.positionOffset[1],
+          originalPosition.z + activeConfig.positionOffset[2]
         );
 
         mesh.scale.set(
-          origScale.x * config.scaleMultiplier[0],
-          origScale.y * config.scaleMultiplier[1],
-          origScale.z * config.scaleMultiplier[2]
+          originalScale.x * activeConfig.scaleMultiplier[0],
+          originalScale.y * activeConfig.scaleMultiplier[1],
+          originalScale.z * activeConfig.scaleMultiplier[2]
         );
       } else {
-        // ===== DESKTOP: Todas las animaciones (mouse + scroll) =====
-        
-        // Add mouse-influenced rotation
+        // Desktop: Animaciones completas con pre-cálculos
         const uniqueFactor = 0.03 + (index * 0.01);
-        const targetRotationX = mesh.rotation.x - (mousePosition.y * uniqueFactor);
-        const targetRotationY = mesh.rotation.y + (mousePosition.x * uniqueFactor);
+        const targetRotX = mesh.rotation.x - (mousePosition.y * uniqueFactor);
+        const targetRotY = mesh.rotation.y + (mousePosition.x * uniqueFactor);
 
-        // Smooth interpolation
-        mesh.rotation.x += (targetRotationX - mesh.rotation.x) * 0.1;
-        mesh.rotation.y += (targetRotationY - mesh.rotation.y) * 0.1;
+        mesh.rotation.x += (targetRotX - mesh.rotation.x) * animationConstants.mouseRotationLerpFactor;
+        mesh.rotation.y += (targetRotY - mesh.rotation.y) * animationConstants.mouseRotationLerpFactor;
 
-        // Pre-calculate scroll-based values
-        const zScrollFactor = 30 + (index * 4);
-        const zOffset = scrollProgress * zScrollFactor;
+        // Pre-cálculos de scroll optimizados
+        const zOffset = scrollProgress * (animationConstants.scrollZBaseFactor + (index * animationConstants.scrollZIncrementFactor));
+        const xDispersion = (index % 2 === 0 ? 1 : -1) * scrollProgress * (index + 1) * animationConstants.scrollDispersionBaseFactor;
+        const yDispersion = ((index % 3) - 1) * scrollProgress * (index + 1) * 3;
+        const scaleFactor = 1 + (scrollProgress * animationConstants.scrollScaleFactor);
 
-        const xDispersionFactor = (index % 2 === 0 ? 1 : -1) * scrollProgress * (index + 1) * 4;
-        const yDispersionFactor = ((index % 3) - 1) * scrollProgress * (index + 1) * 3;
-
-        // Apply position with scroll effects
         mesh.position.set(
-          origPos.x + config.positionOffset[0] + xDispersionFactor,
-          origPos.y + config.positionOffset[1] + yDispersionFactor,
-          origPos.z + config.positionOffset[2] + zOffset
+          originalPosition.x + activeConfig.positionOffset[0] + xDispersion,
+          originalPosition.y + activeConfig.positionOffset[1] + yDispersion,
+          originalPosition.z + activeConfig.positionOffset[2] + zOffset
         );
 
-        // Apply scale with scroll factor
-        const scaleFactor = 1 + (scrollProgress * 1.2);
         mesh.scale.set(
-          origScale.x * config.scaleMultiplier[0] * scaleFactor,
-          origScale.y * config.scaleMultiplier[1] * scaleFactor,
-          origScale.z * config.scaleMultiplier[2] * scaleFactor
+          originalScale.x * activeConfig.scaleMultiplier[0] * scaleFactor,
+          originalScale.y * activeConfig.scaleMultiplier[1] * scaleFactor,
+          originalScale.z * activeConfig.scaleMultiplier[2] * scaleFactor
         );
       }
     });
 
-    // Rotate the group based on mouse position - SOLO DESKTOP
+    // Group rotation para desktop
     if (groupRef.current && !isMobile) {
       const mouseInfluence = {
-        x: mousePosition.x * 0.15,
-        y: mousePosition.y * 0.15
+        x: mousePosition.x * animationConstants.mouseInfluenceDesktop,
+        y: mousePosition.y * animationConstants.mouseInfluenceDesktop
       };
       
-      const targetRotationX = -mouseInfluence.y;
-      const targetRotationY = -mouseInfluence.x;
+      const targetRotX = -mouseInfluence.y;
+      const targetRotY = -mouseInfluence.x;
 
-      groupRef.current.rotation.x += (targetRotationX - groupRef.current.rotation.x) * 0.05;
-      groupRef.current.rotation.y += (targetRotationY - groupRef.current.rotation.y) * 0.05;
+      groupRef.current.rotation.x += (targetRotX - groupRef.current.rotation.x) * animationConstants.rotationLerpFactor;
+      groupRef.current.rotation.y += (targetRotY - groupRef.current.rotation.y) * animationConstants.rotationLerpFactor;
       groupRef.current.rotation.z = scrollProgress * 0.5;
     }
   });
+
+  // Material optimizado con configuración adaptativa
+  const materialConfig = useMemo(() => (
+    isMobile 
+      ? { samples: 1, resolution: 720 }
+      : { samples: 3, resolution: 1080 }
+  ), [isMobile]);
 
   return (
     <>
@@ -377,8 +373,8 @@ function Model() {
           chromaticAberration={1}
           backside={false}
           color="#FF5741"
-          samples={4}
-          resolution={1080}
+          samples={materialConfig.samples}
+          resolution={materialConfig.resolution}
           anisotropicBlur={0.05}
           temporalDistortion={0.05}
         />
@@ -387,51 +383,36 @@ function Model() {
   );
 }
 
-// Preload del modelo para evitar loading issues
+// Preload optimizado
 useGLTF.preload('/models/break.glb');
 
-// Definición de tipos para las referencias de texto
-type TextRef = React.RefObject<Mesh<BufferGeometry, Material | Material[]>>;
-
-// TextElements optimizado con mejor gestión de state
+// TextElements con mejor memoización
 const TextElements = React.memo(() => {
   const fontSemibold = "/fonts/ClashDisplay-Semibold.ttf";
   const { viewport, size } = useThree();
-  const isMobile = size.width < 640;
+  const isMobile = useMemo(() => size.width < 640, [size.width]);
 
-  // Referencias para medir el ancho del texto
-  const rompeRef = useRef<Mesh>(null);
-  const mosRef = useRef<Mesh>(null);
-  const lasRef = useRef<Mesh>(null);
-  const reglasRef = useRef<Mesh>(null);
-  const rompemosRef = useRef<Mesh>(null);
-  const lasReglasRef = useRef<Mesh>(null);
-
-  // Estado para configuración de texto
-  const [textConfig, setTextConfig] = useState({
+  // Configuración memoizada
+  const textConfig = useMemo(() => ({
     scale: 1,
     desktopOffsetX: 1.11,
     mobileOffsetX: 1.4
-  });
+  }), []);
 
-  // Cálculos memoizados para viewport
   const viewportConfig = useMemo(() => {
     const leftEdge = -viewport.width / 2;
     const safeMargin = 0.0;
     const leftMargin = leftEdge + safeMargin;
-    const availableWidth = viewport.width - (safeMargin * 2);
     
-    return { leftEdge, safeMargin, leftMargin, availableWidth };
+    return { leftMargin };
   }, [viewport.width]);
 
-  // Calculamos tamaños de fuente escalados
   const fontSizes = useMemo(() => ({
     mobileFontSize: 0.55 * textConfig.scale,
     desktopFontSize1: 0.75 * textConfig.scale,
     desktopFontSize2: 0.75 * textConfig.scale
   }), [textConfig.scale]);
 
-  // Espaciado vertical base que se escalará
   const spacing = useMemo(() => ({
     baseVerticalGapMobile: 0.45,
     baseVerticalGapDesktop: 0.7
@@ -439,13 +420,11 @@ const TextElements = React.memo(() => {
 
   if (isMobile) {
     const mobileTextGap = spacing.baseVerticalGapMobile * textConfig.scale;
-    const lasHorizontalSpacing = 1;
-    const lasTextOffset = textConfig.mobileOffsetX * textConfig.scale * lasHorizontalSpacing;
+    const lasTextOffset = textConfig.mobileOffsetX * textConfig.scale;
 
     return (
       <>
         <Text
-          ref={rompeRef}
           position={[viewportConfig.leftMargin, 1.05, 0]}
           color="#B6BCC7"
           textAlign="left"
@@ -458,7 +437,6 @@ const TextElements = React.memo(() => {
           ROMPE-
         </Text>
         <Text
-          ref={mosRef}
           position={[viewportConfig.leftMargin, 1.05 - mobileTextGap, 0]}
           color="#B6BCC7"
           textAlign="left"
@@ -471,7 +449,6 @@ const TextElements = React.memo(() => {
           MOS
         </Text>
         <Text
-          ref={lasRef}
           position={[viewportConfig.leftMargin + lasTextOffset, 1.05 - mobileTextGap, 0]}
           color="#FF5741"
           textAlign="left"
@@ -484,7 +461,6 @@ const TextElements = React.memo(() => {
           LAS
         </Text>
         <Text
-          ref={reglasRef}
           position={[viewportConfig.leftMargin, 1.05 - (mobileTextGap * 2), 0]}
           color="#FF5741"
           textAlign="left"
@@ -505,7 +481,6 @@ const TextElements = React.memo(() => {
     return (
       <>
         <Text
-          ref={rompemosRef}
           position={[viewportConfig.leftMargin, verticalGap, 0]}
           color="#B6BCC7"
           textAlign="left"
@@ -518,7 +493,6 @@ const TextElements = React.memo(() => {
           ROMPEMOS
         </Text>
         <Text
-          ref={lasReglasRef}
           position={[viewportConfig.leftMargin + secondTextOffset, 0, 0]}
           color="#B6BCC7"
           textAlign="left"
@@ -535,47 +509,47 @@ const TextElements = React.memo(() => {
   }
 });
 
-// Loader simplificado
-const Loader = React.memo(() => {
-  return (
-    <mesh>
-      <sphereGeometry args={[1, 8, 8]} />
-      <meshStandardMaterial color="#444444" wireframe />
-    </mesh>
-  );
-});
+// Loader optimizado
+const Loader = React.memo(() => (
+  <mesh>
+    <sphereGeometry args={[1, 8, 8]} />
+    <meshStandardMaterial color="#444444" wireframe />
+  </mesh>
+));
 
-// Componente principal optimizado
+// Componente principal con mejor gestión de estado
 export default function HeroBackground() {
   const [viewportSize, setViewportSize] = useState('desktop');
+  const [isInitialized, setIsInitialized] = useState(false);
 
   const checkViewportSize = useCallback(
     debounce(() => {
       const width = window.innerWidth;
-      if (width < 640) {
-        setViewportSize('mobile');
-      } else if (width >= 640 && width <= 1023) {
-        setViewportSize('tablet');
-      } else {
-        setViewportSize('desktop');
+      const newSize = width < 640 ? 'mobile' : width <= 1023 ? 'tablet' : 'desktop';
+      
+      if (newSize !== viewportSize) {
+        setViewportSize(newSize);
       }
     }, 100),
-    []
+    [viewportSize]
   );
 
   useEffect(() => {
     checkViewportSize();
-    window.addEventListener('resize', checkViewportSize);
+    setIsInitialized(true);
+    
+    window.addEventListener('resize', checkViewportSize, { passive: true });
     return () => window.removeEventListener('resize', checkViewportSize);
   }, [checkViewportSize]);
 
-  // Calculate height class based on viewport size
   const heightClass = useMemo(() => {
-    return viewportSize === 'mobile' ? 'h-[600px]' :
-           viewportSize === 'tablet' ? 'h-[500px]' : 'h-full';
+    switch (viewportSize) {
+      case 'mobile': return 'h-[600px]';
+      case 'tablet': return 'h-[500px]';
+      default: return 'h-full';
+    }
   }, [viewportSize]);
 
-  // Estilos globales memoizados
   const globalStyles = useMemo(() => `
     @font-face {
       font-family: 'ClashDisplay-Regular';
@@ -594,14 +568,19 @@ export default function HeroBackground() {
     }
   `, []);
 
+  if (!isInitialized) {
+    return <div className={`${heightClass} bg-black`} />;
+  }
+
   return (
-    <React.Fragment>
+    <>
       <style dangerouslySetInnerHTML={{ __html: globalStyles }} />
       <div className={`inset-0 w-full -z-10 px-4 md:px-6 lg:px-8 xl:px-10 2xl:px-20 ${heightClass}`}>
         <Canvas
           camera={{ position: [0, 0, 5], fov: 50 }}
           className="w-full h-full"
-          frameloop="always"
+          frameloop={isInitialized ? "always" : "never"}
+          performance={{ min: 0.5 }}
         >
           <color attach="background" args={['#000000']} />
           <ambientLight intensity={0.5} />
@@ -619,6 +598,6 @@ export default function HeroBackground() {
           />
         </Canvas>
       </div>
-    </React.Fragment>
+    </>
   );
 }
