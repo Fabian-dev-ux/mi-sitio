@@ -214,7 +214,7 @@ export default function CalculadoraPresupuesto() {
     return (
       <div className="max-w-2xl mx-auto p-6 bg-white rounded-xl shadow-lg">
         {/* Formulario oculto para Netlify */}
-        <form name="calculadora-leads" netlify="true" hidden>
+        <form name="calculadora-leads" data-netlify="true" hidden>
           <input type="text" name="rango-precio" />
           <input type="text" name="precio-total-calculado" />
           <input type="text" name="respuestas" />
