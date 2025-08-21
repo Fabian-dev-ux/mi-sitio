@@ -369,7 +369,7 @@ const ProcesoSectionSticky: React.FC = () => {
         <div className="relative z-[3]">
           {/* Encabezado */}
           <Encabezado 
-            numero="03" 
+            numero="04" 
             seccion="Proceso" 
             titulo="Un enfoque estructurado y metodológico para garantizar el éxito sostenible de cada proyecto digital" 
           />
@@ -447,7 +447,7 @@ const ProcesoSectionSticky: React.FC = () => {
       <div className="relative z-[2]">
         {/* Encabezado */}
         <Encabezado 
-          numero="03" 
+          numero="04" 
           seccion="Proceso" 
           titulo="Un enfoque estructurado para garantizar el éxito de cada proyecto digital" 
         />
