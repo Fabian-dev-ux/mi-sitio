@@ -75,14 +75,8 @@ export default function CalculadoraPresupuesto() {
 
     return (
         <div className="relative min-h-screen text-white font-archivo">
-            <form name="calculadora-leads" data-netlify="true" netlify-honeypot="bot-field" hidden>
-                <input type="hidden" name="form-name" value="calculadora-leads" />
-                <input type="hidden" name="rango-precio" />
-                <input type="hidden" name="precio-total-calculado" />
-                {questions.map(q => <input key={q.id} type="hidden" name={q.id} />)}
-                <input type="hidden" name="timestamp" />
-            </form>
-
+            {/* El formulario oculto se ha eliminado de aquí, ya que ahora Netlify lo detectará desde /public/form.html */}
+            
             <div className="relative z-20 px-4 lg:px-8 xl:px-10 2xl:px-20 pt-20 lg:pt-32 2xl:pt-40">
                 <StaticHeader />
                 <div className="flex items-center justify-center pt-0 lg:pt-8 pb-20 lg:pb-40">
