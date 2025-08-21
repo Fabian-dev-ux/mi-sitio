@@ -338,7 +338,7 @@ const Vision: React.FC = () => {
       id="visión"
     >
       <Encabezado
-        numero="04"
+        numero="05"
         seccion="Visión"
         titulo="En un mundo saturado de información, nosotros creamos claridad. En un entorno digital impersonal, construimos conexiones auténticas. Acompañamos a cada cliente entendiendo que detrás de cada marca hay personas con sueños y la determinación de hacer la diferencia."
         espaciadoPalabras="0.6rem"
