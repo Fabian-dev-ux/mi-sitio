@@ -16,15 +16,15 @@ const Footer = () => {
   useGSAP(() => {
     // Verificar si estamos en mobile (ancho menor a 768px)
     const isMobile = window.innerWidth < 768;
-    
+
     // Solo aplicar parallax si NO estamos en mobile
     if (!isMobile) {
       // Animación para el efecto Parallax aplicada solo al div específico mx-auto w-full
       const tl = gsap.timeline({
         scrollTrigger: {
           trigger: footerRef.current,
-          start: "top bottom", 
-          end: "bottom top", 
+          start: "top bottom",
+          end: "bottom top",
           scrub: true,
         },
       });
@@ -32,24 +32,25 @@ const Footer = () => {
       // Movimiento en el eje Y aplicado sólo al div con classe mx-auto w-full
       tl.fromTo(
         parallaxTargetRef.current,
-        { y: "-75%" }, 
+        { y: "-75%" },
         { y: "75%", ease: "none" }
       );
     }
   }, { scope: footerRef }); // Scope para limitar la animación al footer
 
   return (
-    <footer ref={footerRef} className="bg-primary text-dark w-full relative">
+    // En tu Footer component, cambia esta línea:
+    <footer ref={footerRef} className="bg-primary text-dark w-full relative z-0">
       {/* Contenido principal del footer - sin parallax */}
       <div className="pt-12 pb-8 px-4 md:px-6 lg:px-8 xl:px-10 2xl:px-20 w-full">
         {/* Top section with contact and navigation */}
-        <div ref={parallaxTargetRef} className="mx-auto w-full">
+        <div ref={parallaxTargetRef} className="mx-auto w-full relative -z-10">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8 border-black/30 pt-4 md:pt-32 lg:pt-16 xl:pt-24 2xl:pt-32 pb-0">
             {/* CTA Section - Se muestra primero en móvil */}
             <div className="md:col-span-4 md:col-start-9 order-first md:order-last pt-1">
               <div>
                 <h2 className="font-display font-semibold text-dark text-4xl 2xl:text-5xl tracking-tight uppercase inline-block mb-4">
-                  LLEVEMOS TU PROYECTO AL SIGUIENTE NIVEL 
+                  LLEVEMOS TU PROYECTO AL SIGUIENTE NIVEL
                 </h2>
                 <MagneticButton
                   magneticStrength={0.3}
@@ -86,8 +87,8 @@ const Footer = () => {
                 <div className="contact-info-social flex flex-col ml-0 md:ml-0 lg:ml-0 xl:ml-0 2xl:ml-8">
                   <div className="mb-2">
                     <p className="mb-0">
-                      <a 
-                        href="mailto:INFO@ANTAGONIK.COM" 
+                      <a
+                        href="mailto:INFO@ANTAGONIK.COM"
                         className="uppercase text-base font-normal text-dark font-archivo relative inline-block group"
                       >
                         INFO@ANTAGONIK.COM
@@ -95,9 +96,9 @@ const Footer = () => {
                       </a>
                     </p>
                     <p className="mt-1">
-                      <a 
-                        href="https://wa.me/message/6HLV5OAO5GMBO1" 
-                        target="_blank" 
+                      <a
+                        href="https://wa.me/message/6HLV5OAO5GMBO1"
+                        target="_blank"
                         rel="noopener noreferrer"
                         className="text-dark text-[1.188rem] font-archivo font-normal relative inline-block group"
                       >
@@ -124,7 +125,7 @@ const Footer = () => {
                         />
                       </div>
                     </Link>
-                    
+
                     {/* Behance icon with SlideTextOnHover effect */}
                     <Link
                       href="https://www.behance.net/antagonik-estudio"
@@ -140,7 +141,7 @@ const Footer = () => {
                         />
                       </div>
                     </Link>
-                    
+
                     {/* Instagram icon with SlideTextOnHover effect */}
                     <Link
                       href="https://instagram.com"
@@ -206,12 +207,12 @@ const Footer = () => {
             <p className="text-dark">© Antagonik 2025</p>
             <Link href="/politica-de-privacidad" className="hover:underline text-dark block md:hidden mt-0.5">POLÍTICA DE PRIVACIDAD</Link>
           </div>
-          
+
           {/* Solo visible en desktop: política de privacidad en su posición original */}
           <div className="hidden md:block md:col-span-4">
             <Link href="/politica-de-privacidad" className="hover:underline text-dark">POLÍTICA DE PRIVACIDAD</Link>
           </div>
-          
+
           {/* Mobile: segunda columna con créditos en 2 líneas */}
           {/* Desktop: ocupa desde la columna 8 hasta la 12 para evitar que se rompa */}
           <div className="col-span-1 md:col-span-5 md:col-start-8 text-right">
