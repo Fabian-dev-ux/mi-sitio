@@ -176,7 +176,8 @@ const Encabezado: React.FC<EncabezadoProps> = ({
       {/* Encabezado */}
       <div className="grid grid-cols-12 gap-4 md:gap-8 items-start pt-4 md:pt-5 pb-0 mt-0 text-xs text-gray-400 uppercase">
         {/* Number column */}
-        <div ref={numeroRef} className="hidden lg:block lg:col-span-2 2xl:col-span-3 mt-1 font-archivo font-normal text-sm text-gray-700">
+        {/* ***** CAMBIO 1: Tamaño de fuente responsivo para 'Número' ***** */}
+        <div ref={numeroRef} className="hidden lg:block lg:col-span-2 2xl:col-span-3 mt-1 font-archivo font-normal text-sm xl:text-xs 2xl:text-sm text-gray-700">
           <span className="word-container inline-block overflow-hidden">
             <span className="word inline-block transform translate-y-full opacity-0">/ {numero}</span>
           </span>
@@ -185,7 +186,8 @@ const Encabezado: React.FC<EncabezadoProps> = ({
         {/* Title and section */}
         <div className="col-span-12 md:col-span-11 lg:col-span-9 2xl:col-span-7 2xl:col-start-4 flex flex-col relative">
           <div className="text-[1.65rem] md:text-3xl lg:text-4xl 2xl:text-5xl font-display font-semibold text-gray-400 uppercase leading-[1.1] max-w-[360px] md:max-w-[900px] lg:max-w-[750px] 2xl:max-w-[1000px] relative">
-            <span ref={seccionRef} className="hidden md:block absolute left-0 top-[2.5px] md:top-[4.5px] font-display font-normal text-xs md:text-sm text-gray-700">
+            {/* ***** CAMBIO 2: Fuente y tamaño responsivo para 'Sección' ***** */}
+            <span ref={seccionRef} className="hidden md:block absolute left-0 top-[2.5px] md:top-[4.5px] font-archivo font-normal text-xs md:text-sm xl:text-xs 2xl:text-sm text-gray-700">
               <span className="word-container inline-block overflow-hidden">
                 <span className="word inline-block transform translate-y-full opacity-0">[ {seccion} ]</span>
               </span>
@@ -205,7 +207,8 @@ const Encabezado: React.FC<EncabezadoProps> = ({
         </div>
         
         {/* Copyright */}
-        <div ref={copyrightRef} className="hidden lg:block lg:col-span-1 2xl:col-span-2 2xl:col-start-11 text-right mt-1 font-archivo font-normal text-sm text-gray-700">
+        {/* ***** CAMBIO 3: Tamaño de fuente responsivo para 'Copyright' ***** */}
+        <div ref={copyrightRef} className="hidden lg:block lg:col-span-1 2xl:col-span-2 2xl:col-start-11 text-right mt-1 font-archivo font-normal text-sm xl:text-xs 2xl:text-sm text-gray-700">
           <span className="word-container inline-block overflow-hidden">
             <span className="word inline-block transform translate-y-full opacity-0">&copy;2025</span>
           </span>
