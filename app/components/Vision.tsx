@@ -335,7 +335,7 @@ const Vision: React.FC = () => {
     <section 
       ref={sectionRef}
       className="relative z-10 bg-dark text-white px-4 md:px-6 lg:px-8 xl:px-10 2xl:px-20 pt-10 md:pt-16 lg:pt-20 2xl:pt-32 pb-12 lg:pb-24 2xl:pb-32" 
-      id="visión"
+      id="vision"
     >
       <Encabezado
         numero="05"
