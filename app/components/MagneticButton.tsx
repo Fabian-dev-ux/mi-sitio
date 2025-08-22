@@ -1,103 +1,73 @@
 "use client";
-import React, { useRef, useEffect, ReactNode } from "react";
-import gsap from "gsap";
+import React, { useRef, forwardRef, useImperativeHandle } from "react";
+import { gsap } from "gsap";
+import { useGSAP } from "@gsap/react";
 
+// Definimos las props que nuestro componente aceptará
 interface MagneticButtonProps {
-  children: ReactNode;
+  children: React.ReactNode;
   className?: string;
   magneticStrength?: number;
-  magneticArea?: number;
-  [key: string]: any; // For additional props
+  [key: string]: any; // Para otras props como onClick, etc.
 }
 
-const MagneticButton: React.FC<MagneticButtonProps> = ({ 
+const MagneticButton = forwardRef<HTMLDivElement, MagneticButtonProps>(({ 
   children, 
   className = "", 
-  magneticStrength = 0.5, 
-  magneticArea = 150, 
+  magneticStrength = 0.4, 
   ...props 
-}) => {
-  const buttonRef = useRef<HTMLDivElement>(null);
+}, ref) => {
+  
   const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const button = buttonRef.current;
+  // useImperativeHandle nos permite unir la ref externa con nuestra ref interna
+  useImperativeHandle(ref, () => containerRef.current!);
+
+  useGSAP(() => {
     const container = containerRef.current;
-    
-    if (!button || !container) return;
-    
-    // Variables para almacenar las dimensiones del botón y su posición original
-    let buttonRect = button.getBoundingClientRect();
-    let buttonCenterX = buttonRect.left + buttonRect.width / 2;
-    let buttonCenterY = buttonRect.top + buttonRect.height / 2;
-    
-    // Guardar la posición original del botón
-    const originalX = 0;
-    const originalY = 0;
-    
+    if (!container) return;
+
+    // quickTo es la forma más eficiente de hacer esto
+    const xTo = gsap.quickTo(container, "x", { duration: 1, ease: "elastic.out(1, 0.3)" });
+    const yTo = gsap.quickTo(container, "y", { duration: 1, ease: "elastic.out(1, 0.3)" });
+
     const handleMouseMove = (e: MouseEvent) => {
-      // Actualizar las dimensiones del botón en cada movimiento
-      buttonRect = button.getBoundingClientRect();
-      buttonCenterX = buttonRect.left + buttonRect.width / 2;
-      buttonCenterY = buttonRect.top + buttonRect.height / 2;
+      if(!container) return;
+
+      const { clientX, clientY } = e;
+      const { height, width, left, top } = container.getBoundingClientRect();
       
-      // Calcular la distancia entre el cursor y el centro del botón
-      const deltaX = e.clientX - buttonCenterX;
-      const deltaY = e.clientY - buttonCenterY;
-      const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+      const x = clientX - (left + width / 2);
+      const y = clientY - (top + height / 2);
       
-      // Si el cursor está dentro de la zona de influencia
-      if (distance < magneticArea) {
-        // Calcular el desplazamiento proporcional a la distancia
-        const moveX = deltaX * magneticStrength;
-        const moveY = deltaY * magneticStrength;
-        
-        // Animar el botón hacia el cursor
-        gsap.to(button, {
-          x: moveX,
-          y: moveY,
-          duration: 0.3,
-          ease: "power2.out"
-        });
-      } else {
-        // Si está fuera de la zona, volver a la posición original
-        gsap.to(button, {
-          x: originalX,
-          y: originalY,
-          duration: 0.7,
-          ease: "elastic.out(1, 0.3)"
-        });
-      }
+      xTo(x * magneticStrength);
+      yTo(y * magneticStrength);
     };
-    
+
     const handleMouseLeave = () => {
-      // Devolver el botón a su posición original cuando el cursor sale
-      gsap.to(button, {
-        x: originalX,
-        y: originalY,
-        duration: 0.7,
-        ease: "elastic.out(1, 0.3)"
-      });
+      xTo(0);
+      yTo(0);
     };
-    
-    // Agregar event listeners
-    document.addEventListener("mousemove", handleMouseMove);
+
+    container.addEventListener("mousemove", handleMouseMove);
     container.addEventListener("mouseleave", handleMouseLeave);
-    
-    // Limpiar event listeners al desmontar
+
+    // GSAP se encarga de la limpieza automáticamente con useGSAP
     return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
+      container.removeEventListener("mousemove", handleMouseMove);
       container.removeEventListener("mouseleave", handleMouseLeave);
-    };
-  }, [magneticStrength, magneticArea]);
+    }
+
+  }, { scope: containerRef });
 
   return (
-    <div ref={containerRef} className="relative">
-      <div ref={buttonRef} className={className} {...props}>
-        {children}
-      </div>
+    <div ref={containerRef} className={className} {...props}>
+      {children}
     </div>
   );
-};
+});
+
+// Esto es útil para las herramientas de desarrollo de React
+MagneticButton.displayName = "MagneticButton";
 
 export default MagneticButton;
