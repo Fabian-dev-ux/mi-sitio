@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
-import { ScrollTrigger } from '@/lib/gsapInit';
+import { ScrollTrigger, setTransitioning } from '@/lib/gsapInit';
 import { getLenis } from '@/lib/lenis';
 
 export default function GsapManager() {
@@ -22,8 +22,8 @@ export default function GsapManager() {
                     (window.innerWidth <= 768 || 
                      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
 
-    // Timeout ajustado según el dispositivo
-    const timeout = isMobile ? 200 : 150;
+    // Timeout más largo para dar tiempo a que termine la transición de página
+    const timeout = isMobile ? 400 : 200;
 
     const timer = setTimeout(() => {
       console.log('GsapManager - Ejecutando refresh y scroll logic');
@@ -32,7 +32,11 @@ export default function GsapManager() {
       if (lenis) {
         lenis.resize();
       }
-      ScrollTrigger.refresh();
+      
+      // Solo hacer refresh si no estamos en transición
+      if (typeof setTransitioning === 'function') {
+        ScrollTrigger.refresh();
+      }
 
       // Lógica de scroll
       const hash = window.location.hash;
