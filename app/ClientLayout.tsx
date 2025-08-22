@@ -1,3 +1,4 @@
+// ClientLayout.tsx (CORREGIDO)
 'use client';
 
 import { useState, useEffect, useRef } from "react";
@@ -5,33 +6,35 @@ import Navbar from "@/components/Navbar";
 import ConditionalFooter from "@/components/ConditionalFooter";
 import EntranceAnimation from "@/components/EntranceAnimation";
 import PageTransition from "@/components/PageTransition";
-import GsapManager from "@/components/GsapManager"; // <-- RUTA CORREGIDA
+import GsapManager from "@/components/GsapManager";
 
 export default function ClientLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Cambia el estado inicial de contentVisible a false
   const [animationCompleted, setAnimationCompleted] = useState(false);
   const [contentVisible, setContentVisible] = useState(false);
   const mainContentRef = useRef(null);
 
+  // Esta función ahora actualiza el estado de forma síncrona y lógica
   const handleAnimationComplete = () => {
-    console.log("Animation complete in layout");
+    console.log("Entrance Animation is officially complete.");
+    // 1. Marca la animación como completada para que el componente se desmonte.
+    setAnimationCompleted(true);
+    // 2. Inmediatamente después, haz visible el contenido principal.
     setContentVisible(true);
-    setTimeout(() => {
-      setAnimationCompleted(true);
-    }, 1200);
   };
 
   return (
     <>
       <GsapManager />
 
-      {/* Contenido principal siempre presente, pero inicialmente invisible */}
+      {/* Contenido principal: corregimos la lógica de opacidad */}
       <div
         ref={mainContentRef}
-        className={`transition-opacity duration-700 ease-out ${contentVisible ? 'opacity-100' : 'opacity-100'}`}
+        className={`transition-opacity duration-700 ease-out ${contentVisible ? 'opacity-100' : 'opacity-0'}`} // <-- CORREGIDO
         style={{
           position: 'relative',
           zIndex: 1,
@@ -50,6 +53,7 @@ export default function ClientLayout({
             zIndex: 2
           }}
         >
+          {/* PageTransition ahora recibe el estado correcto en el momento correcto */}
           <PageTransition isReady={animationCompleted}>
             {children}
           </PageTransition>
@@ -58,6 +62,7 @@ export default function ClientLayout({
         <ConditionalFooter />
       </div>
              
+      {/* Este bloque ahora se eliminará del DOM en el momento justo */}
       {!animationCompleted && (
         <div
           style={{
