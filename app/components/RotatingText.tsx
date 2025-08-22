@@ -1,7 +1,11 @@
+"use client";
 import React, { useState, useEffect, useRef, CSSProperties } from 'react';
 import { useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import { gsap, ScrollTrigger } from "@/lib/gsapInit"; // Importación centralizada de GSAP
+// 1. IMPORTAR Link Y QUITAR useRouter
+import Link from 'next/link';
+import { gsap } from "@/lib/gsapInit"; // Se mantiene la importación de GSAP
+
+// --- COMPONENTES HIJOS Y UTILIDADES (CÓDIGO ORIGINAL COMPLETO) ---
 
 // Interfaces para las props de los componentes
 interface RotatingArrowProps {
@@ -118,16 +122,18 @@ const CircularText: React.FC<CircularTextProps> = ({
   );
 };
 
+// --- COMPONENTE PRINCIPAL (CÓDIGO ORIGINAL CON MÍNIMAS MODIFICACIONES) ---
+
 const CircularRotatingText: React.FC<CircularRotatingTextProps> = ({ 
-  baseSpeed = 10,        // Velocidad base de rotación
-  minSpeed = 5,          // Velocidad mínima a la que se resetea
-  maxSpeed = 10,         // Velocidad máxima durante scroll
-  scrollSensitivity = 0.4, // Sensibilidad del scroll
-  width = "100%",        // Ancho personalizable
-  height = "100%",      // Altura personalizable
-  className = "",        // Clases adicionales
-  containerStyle = {},   // Estilos adicionales para el contenedor
-  href = "/contacto"     // URL destino al hacer clic
+  baseSpeed = 10,
+  minSpeed = 5,
+  maxSpeed = 10,
+  scrollSensitivity = 0.4,
+  width = "100%",
+  height = "100%",
+  className = "",
+  containerStyle = {},
+  href = "/contacto"
 }) => {
   const [isHovering, setIsHovering] = useState<boolean>(false);
   const [isMobile, setIsMobile] = useState<boolean>(false);
@@ -136,9 +142,9 @@ const CircularRotatingText: React.FC<CircularRotatingTextProps> = ({
   const isAnimating = useRef<boolean>(true);
   const animationRef = useRef<number | null>(null);
   const defaultDirectionRef = useRef<number>(1);
-  const router = useRouter();
+  // 2. QUITAR useRouter
+  // const router = useRouter(); 
 
-  // Referencias para los elementos de texto
   const textRefs: React.RefObject<SVGTextElement>[] = [
     useRef<SVGTextElement>(null),
     useRef<SVGTextElement>(null),
@@ -151,39 +157,29 @@ const CircularRotatingText: React.FC<CircularRotatingTextProps> = ({
   const outerCircleRadius = 240;
   const expandedRadius = outerCircleRadius - 20;
   
-  // Función para manejar el click
-  const handleClick = (): void => {
-    router.push(href);
-  };
+  // 3. QUITAR la función handleClick
+  // const handleClick = (): void => {
+  //   router.push(href);
+  // };
 
-  // Función para animar los elementos de texto
   const animate = useCallback((): void => {
-    // En mobile, mantener velocidad constante sin efectos de scroll
     if (isMobile) {
-      // Velocidad constante para móvil
       speed.current = minSpeed * defaultDirectionRef.current;
     } else {
-      // Lógica original para desktop
       if (!isScrolling.current) {
         speed.current = speed.current * 0.9;
-        
         if (Math.abs(speed.current) < minSpeed) {
           speed.current = minSpeed * defaultDirectionRef.current;
         }
       }
-      
       isScrolling.current = false;
     }
 
-    // Actualizar la rotación de cada texto basado en su dirección
     textRefs.forEach(ref => {
       if (ref.current) {
         const direction = parseInt(ref.current.getAttribute('data-direction') || '1');
-        
-        // En mobile, usar velocidad constante. En desktop, usar lógica original
         const speedFactor = isMobile ? 0.3 : (Math.abs(speed.current) > minSpeed ? 1.0 : 0.2);
         
-        // Usar GSAP para la animación suave
         gsap.to(ref.current, {
           rotate: `+=${speed.current * direction * speedFactor}`,
           duration: 0.2,
@@ -193,73 +189,41 @@ const CircularRotatingText: React.FC<CircularRotatingTextProps> = ({
       }
     });
 
-    // Continuar la animación
     animationRef.current = requestAnimationFrame(animate);
   }, [minSpeed, isMobile]);
 
-  // Detectar si es mobile al montar el componente
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(isMobileDevice());
-    };
-
+    const checkMobile = () => { setIsMobile(isMobileDevice()); };
     checkMobile();
     window.addEventListener('resize', checkMobile);
-
-    return () => {
-      window.removeEventListener('resize', checkMobile);
-    };
+    return () => { window.removeEventListener('resize', checkMobile); };
   }, []);
 
   useEffect(() => {
-    // Verificar que GSAP esté disponible
-    if (!gsap) {
-      console.error('GSAP no está disponible. Verifica la importación desde @/lib/gsapInit');
-      return;
-    }
+    if (!gsap) { return; }
 
-    // Configuración inicial - asegurarse de que todos los textos tienen rotate: 0
     textRefs.forEach(ref => {
       if (ref.current) {
         gsap.set(ref.current, { rotate: 0, transformOrigin: 'center center' });
       }
     });
 
-    // Iniciar la animación inmediatamente
     animationRef.current = requestAnimationFrame(animate);
 
-    // Solo agregar event listeners de scroll si NO es mobile
     if (!isMobile) {
-      // Tiempo límite para agrupar eventos de scroll
       let scrollTimeout: NodeJS.Timeout;
-
-      // Manejador de eventos de scroll
       const handleWheel = (e: WheelEvent): void => {
-        // Marcar que estamos haciendo scroll activamente
         isScrolling.current = true;
-        
-        // Limpiar timeout existente
         clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(() => { isScrolling.current = false; }, 150);
         
-        // Establecer nuevo timeout
-        scrollTimeout = setTimeout(() => {
-          isScrolling.current = false;
-        }, 150);
-        
-        // Calcula la velocidad basada en el scroll
         const newSpeed = e.deltaY * scrollSensitivity;
-        
-        // Actualizar la dirección por defecto según la última dirección de scroll
         defaultDirectionRef.current = e.deltaY > 0 ? 1 : -1;
-
-        // Limitar la velocidad máxima para evitar rotaciones muy rápidas
         speed.current = Math.max(Math.min(newSpeed, maxSpeed), -maxSpeed);
       };
 
-      // Agregar el event listener solo para desktop
       window.addEventListener('wheel', handleWheel, { passive: true });
 
-      // Limpieza
       return () => {
         window.removeEventListener('wheel', handleWheel);
         clearTimeout(scrollTimeout);
@@ -268,7 +232,6 @@ const CircularRotatingText: React.FC<CircularRotatingTextProps> = ({
         }
       };
     } else {
-      // Limpieza solo para animación en mobile
       return () => {
         if (animationRef.current !== null) {
           cancelAnimationFrame(animationRef.current);
@@ -277,26 +240,14 @@ const CircularRotatingText: React.FC<CircularRotatingTextProps> = ({
     }
   }, [animate, maxSpeed, scrollSensitivity, isMobile]);
 
-  // Efecto para manejar el hover del círculo central
   useEffect(() => {
     if (!gsap || !circleRef.current) return;
-
     gsap.set(circleRef.current, { transformOrigin: 'center center' });
     
     if (isHovering) {
-      // Animar el círculo al hacer hover con GSAP
-      gsap.to(circleRef.current, {
-        scale: expandedRadius / initialRadius,
-        duration: 0.3,
-        ease: "power2.out"
-      });
+      gsap.to(circleRef.current, { scale: expandedRadius / initialRadius, duration: 0.3, ease: "power2.out" });
     } else {
-      // Restaurar el círculo con GSAP
-      gsap.to(circleRef.current, {
-        scale: 1,
-        duration: 0.3,
-        ease: "power2.out"
-      });
+      gsap.to(circleRef.current, { scale: 1, duration: 0.3, ease: "power2.out" });
     }
   }, [isHovering, expandedRadius, initialRadius]);
 
@@ -306,12 +257,13 @@ const CircularRotatingText: React.FC<CircularRotatingTextProps> = ({
     { text: 'INICIAR ∙ INICIAR ∙ INICIAR ∙', radius: 75, fontSize: 37, direction: 1 }
   ];
 
-  // Mantenemos las proporciones calculando el viewBox en función del radio del círculo exterior
-  const viewBoxSize = outerCircleRadius * 2 + 20; // Añadimos un pequeño margen
+  const viewBoxSize = outerCircleRadius * 2 + 20;
   const viewBox = `-${viewBoxSize/2} -${viewBoxSize/2} ${viewBoxSize} ${viewBoxSize}`;
 
+  // --- 4. LA MODIFICACIÓN FINAL Y CORRECTA EN EL JSX ---
   return (
-    <div 
+    <Link 
+      href={href} 
       className={`flex items-center justify-center ${className}`} 
       style={{ 
         width: width,
@@ -326,7 +278,6 @@ const CircularRotatingText: React.FC<CircularRotatingTextProps> = ({
           viewBox={viewBox}
           preserveAspectRatio="xMidYMid meet"
         >
-          {/* Círculo exterior estático */}
           <circle
             cx="0"
             cy="0"
@@ -335,13 +286,11 @@ const CircularRotatingText: React.FC<CircularRotatingTextProps> = ({
             stroke="#1C1C1C"
             strokeWidth="1"
           />
-
-          {/* Círculo naranja animado con componente RotatingArrow */}
           <g
             onMouseEnter={() => setIsHovering(true)}
             onMouseLeave={() => setIsHovering(false)}
             style={{ cursor: 'pointer' }}
-            onClick={handleClick}
+            // onClick se elimina. Link se encarga.
           >
             <circle
               ref={circleRef}
@@ -350,17 +299,12 @@ const CircularRotatingText: React.FC<CircularRotatingTextProps> = ({
               r={initialRadius}
               fill="#FF5741"
             />
-            
-            {/* Contenedor para la flecha estática */}
             <foreignObject 
               x="-12" 
               y="-12" 
               width="24" 
               height="24" 
-              style={{ 
-                pointerEvents: 'none',
-                overflow: 'visible' 
-              }}
+              style={{ pointerEvents: 'none', overflow: 'visible' }}
             >
               <div style={{ 
                 width: '100%', 
@@ -373,8 +317,6 @@ const CircularRotatingText: React.FC<CircularRotatingTextProps> = ({
               </div>
             </foreignObject>
           </g>
-
-          {/* Textos rotativos */}
           {circleConfigs.map((config, index) => (
             <CircularText
               key={index}
@@ -387,7 +329,7 @@ const CircularRotatingText: React.FC<CircularRotatingTextProps> = ({
           ))}
         </svg>
       </div>
-    </div>
+    </Link>
   );
 };
 
