@@ -1,48 +1,67 @@
-// components/GsapManager.tsx (CORREGIDO Y MEJORADO)
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import { ScrollTrigger } from '@/lib/gsapInit';
 import { getLenis } from '@/lib/lenis';
 
 export default function GsapManager() {
   const pathname = usePathname();
+  const previousPathname = useRef(pathname);
 
   useEffect(() => {
-    // Usamos un timeout ligeramente mayor para dar más tiempo al renderizado en móviles.
+    // Solo ejecutar si realmente cambió la ruta
+    if (previousPathname.current === pathname) {
+      return;
+    }
+
+    console.log('GsapManager - Route change detected:', pathname);
+
+    // Detectar móvil
+    const isMobile = typeof window !== 'undefined' && 
+                    (window.innerWidth <= 768 || 
+                     /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
+
+    // Timeout ajustado según el dispositivo
+    const timeout = isMobile ? 200 : 150;
+
     const timer = setTimeout(() => {
+      console.log('GsapManager - Ejecutando refresh y scroll logic');
+      
       const lenis = getLenis(); 
       if (lenis) {
         lenis.resize();
       }
       ScrollTrigger.refresh();
 
-      // --- LÓGICA DE SCROLL CENTRALIZADA ---
+      // Lógica de scroll
       const hash = window.location.hash;
       
       if (hash) {
-        // Si hay un hash, hacemos scroll a ese elemento usando Lenis
+        console.log('GsapManager - Scrolling to hash:', hash);
         if (lenis) {
-          lenis.scrollTo(hash, { offset: 0, duration: 1.5 }); // Opciones de Lenis para scroll suave
+          lenis.scrollTo(hash, { offset: 0, duration: 1.5 });
         } else {
-          // Fallback por si Lenis no está listo, aunque es raro
           const element = document.querySelector(hash);
           if (element) element.scrollIntoView({ behavior: 'smooth' });
         }
       } else {
-        // Si NO hay hash, vamos al inicio de la página inmediatamente usando Lenis
+        console.log('GsapManager - Scrolling to top');
         if (lenis) {
-          lenis.scrollTo(0, { immediate: true }); // 'immediate' es como scrollTo(0,0) pero para Lenis
+          lenis.scrollTo(0, { immediate: true });
         } else {
-          window.scrollTo(0, 0); // Fallback
+          window.scrollTo(0, 0);
         }
       }
-      // ------------------------------------
 
-    }, 150); // Aumentamos un poco el tiempo a 150ms como margen de seguridad.
+    }, timeout);
 
-    return () => clearTimeout(timer);
+    // Actualizar referencia
+    previousPathname.current = pathname;
+
+    return () => {
+      clearTimeout(timer);
+    };
   }, [pathname]);
 
   return null;
