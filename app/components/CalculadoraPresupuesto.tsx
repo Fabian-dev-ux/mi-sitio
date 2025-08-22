@@ -19,7 +19,7 @@ const questions = [
 ];
 interface Answers { [key: string]: string[] | string; }
 
-// --- CORRECCIÓN APLICADA AQUÍ ---
+// --- COMPONENTES ESTÁTICOS SIN CAMBIOS ---
 const StaticHeader = () => ( <div className="w-full pt-6 pb-0 lg:pt-12 lg:pb-12 font-archivo"> <div className="flex items-center space-x-2 text-sm text-gray-400 uppercase mb-4 lg:mb-8"> <div className="w-2 h-2 bg-gray-400 rounded-full"></div> <span>Bienvenido</span> </div> <h1 className="font-display font-semibold text-gray-400 leading-none lg:leading-none uppercase mb-8 lg:mb-6" style={{ fontSize: 'clamp(3rem, 8vw, 72px)' }}> Vamos a definir tu<br className="lg:hidden" /><br className="hidden lg:block" /> proyecto web </h1> <div className="w-full border-t border-gray-800 mb-8 lg:hidden"></div> </div> );
 
 const StaticDescription = () => ( <div className="lg:col-span-4 xl:col-span-4 2xl:col-span-3 space-y-8 font-archivo"> <div className="space-y-4 text-lg lg:text-2xl text-gray-400 max-w-[20rem]"> <p>En solo <strong className="text-gray-300">4 pasos</strong> tendrás un presupuesto personalizado a tu medida</p> <div className="text-xs text-gray-500 border border-gray-800 rounded-full px-4 py-2 inline-block"> TIEMPO ESTIMADO — 2 — 3 MINUTOS </div> </div> </div> );
@@ -74,8 +74,9 @@ export default function CalculadoraPresupuesto() {
     }
 
     return (
-        <div className="relative min-h-screen text-white font-archivo">
-            {/* El formulario oculto se ha eliminado de aquí, ya que ahora Netlify lo detectará desde /public/form.html */}
+        // --- CORRECCIÓN APLICADA AQUÍ ---
+        // Se eliminó la clase `min-h-screen` para permitir que el scroll de la página funcione correctamente
+        <div className="relative text-white font-archivo">
             
             <div className="relative z-20 px-4 lg:px-8 xl:px-10 2xl:px-20 pt-20 lg:pt-32 2xl:pt-40">
                 <StaticHeader />
