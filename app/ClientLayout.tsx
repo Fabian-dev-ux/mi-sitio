@@ -16,33 +16,14 @@ export default function ClientLayout({
   const [contentVisible, setContentVisible] = useState(false);
   const mainContentRef = useRef(null);
 
-  // Función mejorada para manejar la finalización de la animación
   const handleAnimationComplete = useCallback(() => {
-    console.log("Entrance Animation is officially complete.");
-    
-    // En móviles, añadimos un pequeño delay para asegurar el renderizado
-    const isMobile = typeof window !== 'undefined' && 
-                    (window.innerWidth <= 768 || 
-                     /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
-    
-    const delay = isMobile ? 50 : 0;
-    
-    setTimeout(() => {
-      setAnimationCompleted(true);
-      // Usar requestAnimationFrame para mejor sincronización
-      requestAnimationFrame(() => {
-        setContentVisible(true);
-      });
-    }, delay);
-  }, []);
-
-  // Efecto para debug en desarrollo
-  useEffect(() => {
-    console.log('ClientLayout State:', {
-      animationCompleted,
-      contentVisible
+    // Ya no es necesario un delay complejo aquí. 
+    // Cuando la animación termina, marcamos como completado y visible.
+    setAnimationCompleted(true);
+    requestAnimationFrame(() => {
+      setContentVisible(true);
     });
-  }, [animationCompleted, contentVisible]);
+  }, []);
 
   return (
     <>
@@ -51,7 +32,7 @@ export default function ClientLayout({
       {/* Contenido principal */}
       <div
         ref={mainContentRef}
-        className={`transition-opacity duration-300 ease-out ${
+        className={`transition-opacity duration-500 ease-out ${
           contentVisible ? 'opacity-100' : 'opacity-0'
         }`}
         style={{
@@ -72,7 +53,10 @@ export default function ClientLayout({
             zIndex: 2
           }}
         >
-          <PageTransition isReady={animationCompleted && contentVisible}>
+          {/* PageTransition ya no necesita el prop 'isReady'.
+              Esto lo hace independiente del estado de la animación de entrada,
+              solucionando el problema en móviles. */}
+          <PageTransition>
             {children}
           </PageTransition>
         </main>
@@ -80,7 +64,7 @@ export default function ClientLayout({
         <ConditionalFooter />
       </div>
                     
-      {/* Animación de entrada */}
+      {/* Animación de entrada: se renderiza condicionalmente y se elimina del DOM al completarse */}
       {!animationCompleted && (
         <div
           style={{
