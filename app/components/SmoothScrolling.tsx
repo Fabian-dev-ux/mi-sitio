@@ -1,33 +1,34 @@
+// components/SmoothScrolling.tsx
 'use client'
-import { useEffect, useRef } from 'react'
-import Lenis from '@studio-freight/lenis'
+
+import { useEffect } from 'react'
+import { getLenis } from '@/lib/lenis' // <-- 1. Importa la función
+import { gsap } from 'gsap'
+import { ScrollTrigger } from '@/lib/gsapInit'
 
 export default function SmoothScrolling() {
-  const lenisRef = useRef<Lenis | null>(null)
-  const rafRef = useRef<number | null>(null)
-
   useEffect(() => {
-    lenisRef.current = new Lenis({
-      duration: 1.2,
-      easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-    })
+    // 2. Llama a la función para obtener/crear la instancia DENTRO de useEffect
+    const lenis = getLenis();
 
-    function raf(time: number): void {
-      if (lenisRef.current) {
-        lenisRef.current.raf(time)
-      }
-      rafRef.current = requestAnimationFrame(raf)
+    if (lenis) {
+      // El resto de la lógica es la misma
+      lenis.on('scroll', ScrollTrigger.update)
+
+      gsap.ticker.add((time) => {
+        lenis.raf(time * 1000)
+      })
+
+      gsap.ticker.lagSmoothing(0)
     }
 
-    rafRef.current = requestAnimationFrame(raf)
-
+    // 3. La función de limpieza ahora también destruye la instancia
     return () => {
-      if (lenisRef.current) {
-        lenisRef.current.destroy()
-      }
-      if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current)
-      }
+        if (lenis) {
+            lenis.destroy();
+            // Esto es opcional, pero bueno para el hot-reloading en desarrollo
+            // En la nueva versión de lenis.ts, esto permitiría recrear la instancia.
+        }
     }
   }, [])
 
