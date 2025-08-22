@@ -1,5 +1,5 @@
 'use client'
-import { useRef } from 'react'
+import { useRef, useCallback } from 'react'
 import { usePathname } from 'next/navigation'
 import { gsap } from "@/lib/gsapInit"
 import { useGSAP } from "@gsap/react"
@@ -18,6 +18,14 @@ export default function PageTransition({ children, isReady = true }: PageTransit
 
   const prevPathnameRef = useRef(pathname)
   const hasInitializedRef = useRef(false)
+  const isAnimatingRef = useRef(false)
+
+  // Función para detectar si estamos en móvil
+  const isMobile = useCallback(() => {
+    return typeof window !== 'undefined' && 
+           (window.innerWidth <= 768 || 
+            /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent))
+  }, [])
 
   useGSAP(() => {
     const container = containerRef.current
@@ -27,13 +35,19 @@ export default function PageTransition({ children, isReady = true }: PageTransit
     
     if (!container || !curtain1 || !curtain2 || !curtain3) return
 
+    // Prevenir animaciones múltiples
+    if (isAnimatingRef.current) {
+      console.log('Animación en progreso, saltando...')
+      return
+    }
+
     // Si no está listo, mostrar el contenido sin animación
     if (!isReady) {
+      console.log('PageTransition no está listo, mostrando contenido directamente')
       gsap.set(container, { 
         opacity: 1,
         y: 0
       })
-      // Ocultar las franjas
       gsap.set([curtain1, curtain2, curtain3], { 
         y: '100%',
         scaleY: 0
@@ -41,16 +55,21 @@ export default function PageTransition({ children, isReady = true }: PageTransit
       return;
     }
 
-    // Detectar si es un cambio de ruta real (no la primera carga)
+    // Detectar cambio de ruta real
     const isRouteChange = hasInitializedRef.current && prevPathnameRef.current !== pathname
     
+    console.log('PageTransition - Pathname:', pathname)
+    console.log('PageTransition - PrevPathname:', prevPathnameRef.current)
+    console.log('PageTransition - IsRouteChange:', isRouteChange)
+    console.log('PageTransition - HasInitialized:', hasInitializedRef.current)
+    console.log('PageTransition - IsMobile:', isMobile())
+
     if (!isRouteChange) {
-      // Primera carga o no es cambio de ruta - mostrar contenido directamente
+      // Primera carga - mostrar contenido directamente
       gsap.set(container, { 
         opacity: 1,
         y: 0
       })
-      // Ocultar las franjas
       gsap.set([curtain1, curtain2, curtain3], { 
         y: '100%',
         scaleY: 0
@@ -60,99 +79,114 @@ export default function PageTransition({ children, isReady = true }: PageTransit
       return;
     }
 
-    // Solo ejecutar la animación de transición en cambios de ruta
+    // ANIMACIÓN DE TRANSICIÓN
     console.log('Ejecutando animación de transición de página')
+    isAnimatingRef.current = true
+
+    // Limpiar cualquier animación previa
+    gsap.killTweensOf([container, curtain1, curtain2, curtain3])
 
     // Configuración inicial
     gsap.set(container, { 
       opacity: 0,
-      y: 50 // La nueva página inicia 50px hacia abajo
+      y: 30 // Reducido para móviles
     })
     
-    // Todas las franjas inician desde abajo
     gsap.set([curtain1, curtain2, curtain3], { 
       y: '100%',
       scaleY: 1,
-      transformOrigin: 'bottom center'
+      transformOrigin: 'bottom center',
+      force3D: true // Forzar aceleración de hardware
     })
 
-    const tl = gsap.timeline()
-    
-    // Las franjas suben de forma escalonada (primero la izquierda, luego centro, luego derecha)
+    const tl = gsap.timeline({
+      onComplete: () => {
+        console.log('Animación de transición completada')
+        isAnimatingRef.current = false
+      }
+    })
+
+    // Timing ajustado para móviles
+    const isMobileDevice = isMobile()
+    const baseDelay = isMobileDevice ? 0.1 : 0.15
+    const baseDuration = isMobileDevice ? 0.4 : 0.6
+
+    // Las franjas suben de forma escalonada
     tl.to(curtain1, {
       y: '0%',
-      duration: 0.6,
+      duration: baseDuration,
       ease: 'power2.inOut'
     })
     .to(curtain2, {
       y: '0%',
-      duration: 0.6,
+      duration: baseDuration,
       ease: 'power2.inOut'
-    }, 0.15) // Delay de 0.15s
+    }, baseDelay)
     .to(curtain3, {
       y: '0%',
-      duration: 0.6,
+      duration: baseDuration,
       ease: 'power2.inOut'
-    }, 0.3) // Delay de 0.3s
+    }, baseDelay * 2)
     
-    // Las franjas se contraen desde arriba de forma escalonada - empiezan antes de que termenen de subir
+    // Las franjas se contraen desde arriba
     .to(curtain1, {
       scaleY: 0,
       transformOrigin: 'top center',
-      duration: 0.5,
+      duration: baseDuration * 0.8,
       ease: 'power2.inOut'
-    }, 0.5) // Empieza a contraerse mientras aún está subiendo
+    }, baseDuration * 0.8)
     .to(curtain2, {
       scaleY: 0,
       transformOrigin: 'top center',
-      duration: 0.5,
+      duration: baseDuration * 0.8,
       ease: 'power2.inOut'
-    }, 0.65) // Empieza a contraerse mientras aún está subiendo
+    }, baseDuration * 0.8 + baseDelay)
     .to(curtain3, {
       scaleY: 0,
       transformOrigin: 'top center',
-      duration: 0.5,
+      duration: baseDuration * 0.8,
       ease: 'power2.inOut'
-    }, 0.8) // Empieza a contraerse mientras aún está subiendo
+    }, baseDuration * 0.8 + baseDelay * 2)
     
-    // La nueva página aparece gradualmente con slide up - overlap con la contracción
+    // La nueva página aparece
     .to(container, {
       opacity: 1,
-      y: 0, // Desliza hacia arriba a su posición final
-      duration: 0.6,
+      y: 0,
+      duration: baseDuration,
       ease: 'power2.out'
-    }, 0.7)
+    }, baseDuration * 1.2)
 
-    // Actualizar las referencias
+    // Actualizar referencias
     prevPathnameRef.current = pathname
 
-    // useGSAP automáticamente limpia las animaciones cuando se desmonta
-  }, [pathname, isReady]) // Dependencias para que se ejecute cuando cambien
+  }, [pathname, isReady]) // Dependencias
 
   return (
     <>
-      {/* Franja izquierda */}
+      {/* Franjas de transición */}
       <div
         ref={curtain1Ref}
         className="fixed top-0 left-0 w-1/3 h-full z-50 pointer-events-none bg-primary"
+        style={{ willChange: 'transform' }}
       />
       
-      {/* Franja central */}
       <div
         ref={curtain2Ref}
         className="fixed top-0 left-1/3 w-1/3 h-full z-50 pointer-events-none bg-primary"
+        style={{ willChange: 'transform' }}
       />
       
-      {/* Franja derecha */}
       <div
         ref={curtain3Ref}
         className="fixed top-0 right-0 w-1/3 h-full z-50 pointer-events-none bg-primary"
+        style={{ willChange: 'transform' }}
       />
       
       {/* Contenedor del contenido */}
       <div 
         ref={containerRef} 
         className="min-h-screen"
+        style={{ willChange: 'transform, opacity' }}
       >
         {children}
       </div>
