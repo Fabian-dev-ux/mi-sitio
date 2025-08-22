@@ -1,24 +1,32 @@
 "use client";
 import { FaInstagram, FaFacebookF, FaBehance } from 'react-icons/fa';
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link'; // Mantenemos el uso de Link
 import HeroBackground from './HeroBackground';
 import SlideTextOnHover from './SlideTextOnHover';
 import Image from 'next/image';
 
-// Define interfaces for TypeScript
+// --- INTERFACES (MODIFICADAS PARA ACEPTAR PROPS) ---
 interface RotatingArrowProps {
   isHovering: boolean;
   isGroupHovering?: boolean;
 }
-
 interface SocialIconProps {
   icon?: React.ReactNode;
   hoverIcon?: React.ReactNode;
   link?: string;
+  isMobile: boolean; // Prop para recibir el estado
+}
+interface ScrollTextProps {
+  isMobile: boolean; // Prop para recibir el estado
 }
 
-// RotatingArrow component
+
+// --- COMPONENTES HIJOS (DEFINIDOS FUERA DEL COMPONENTE PRINCIPAL) ---
+// Esta es la estructura correcta. Los componentes se definen una vez
+// a nivel de módulo, no dentro de otro componente.
+
+// RotatingArrow component (CÓDIGO RESTAURADO)
 const RotatingArrow = ({ isHovering, isGroupHovering }: RotatingArrowProps) => {
   const customColor = isGroupHovering ? "#000000" : "#FF5741";
   return (
@@ -35,16 +43,8 @@ const RotatingArrow = ({ isHovering, isGroupHovering }: RotatingArrowProps) => {
   );
 };
 
-// SocialIcon component
-const SocialIcon = ({ icon, hoverIcon, link = "#" }: SocialIconProps) => {
-  const [isMobile, setIsMobile] = useState(false);
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
+// SocialIcon component (SIMPLIFICADO Y RESTAURADO)
+const SocialIcon = ({ icon, hoverIcon, link = "#", isMobile }: SocialIconProps) => {
   if (isMobile) {
     return (
       <a href={link} className="bg-gray-900 w-6 h-6 flex items-center justify-center">
@@ -54,7 +54,6 @@ const SocialIcon = ({ icon, hoverIcon, link = "#" }: SocialIconProps) => {
       </a>
     );
   }
-
   return (
     <a href={link} className="bg-gray-900 w-6 h-6 flex items-center justify-center group">
       <div className="relative w-full h-full flex items-center justify-center">
@@ -67,40 +66,23 @@ const SocialIcon = ({ icon, hoverIcon, link = "#" }: SocialIconProps) => {
   );
 };
 
-// ScrollText component
-const ScrollText = () => {
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
+// ScrollText component (SIMPLIFICADO Y RESTAURADO)
+const ScrollText = ({ isMobile }: ScrollTextProps) => {
   const scrollToVideoReel = () => {
     const videoReelSection = document.getElementById('VideoReel');
     if (videoReelSection) {
       videoReelSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };
-
   if (isMobile) {
     return (
-      <span 
-        className="text-gray-700 font-display text-xs md:text-sm uppercase tracking-wide font-body cursor-pointer"
-        onClick={scrollToVideoReel}
-      >
+      <span className="text-gray-700 font-display text-xs md:text-sm uppercase tracking-wide font-body cursor-pointer" onClick={scrollToVideoReel}>
         [ SCROLL ]
       </span>
     );
   }
-
   return (
-    <div 
-      className="group cursor-pointer leading-none h-[1em]" 
-      onClick={scrollToVideoReel}
-    >
+    <div className="group cursor-pointer leading-none h-[1em]" onClick={scrollToVideoReel}>
       <SlideTextOnHover
         originalText={<span className="text-gray-700 font-archivo uppercase tracking-wide font-body md:text-sm lg:text-xs 2xl:text-sm">Scroll</span>}
         hoverText={<span className="text-gray-700 font-archivo uppercase tracking-wide font-body md:text-sm lg:text-xs 2xl:text-sm">Scroll</span>}
@@ -109,9 +91,7 @@ const ScrollText = () => {
   );
 };
 
-
-// ***** DEFINICIÓN RESTAURADA AQUÍ *****
-// StaticBorder component
+// StaticBorder component (CÓDIGO RESTAURADO)
 const StaticBorder = () => {
   const borderGap = 8;
   const borderThickness = 0.7;
@@ -126,11 +106,12 @@ const StaticBorder = () => {
   );
 };
 
+
+// --- COMPONENTE PRINCIPAL `Hero` ---
 const Hero = () => {
   const [isHovering, setIsHovering] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
-  const router = useRouter();
 
   useEffect(() => {
     const checkDeviceType = () => {
@@ -143,9 +124,6 @@ const Hero = () => {
     window.addEventListener('resize', checkDeviceType);
     return () => window.removeEventListener('resize', checkDeviceType);
   }, []);
-
-  const handleContactClick = () => { router.push('/contacto'); };
-  const handleCalculatorClick = () => { router.push('/calculadora'); };
 
   const heroHeightClasses = `lg:h-screen md:h-auto h-auto min-h-[500px] ${isTablet ? 'max-h-[750px]' : ''}`;
   const heroSpacingClasses = `pt-12 pb-4 md:py-0 ${isTablet ? 'lg:py-6' : ''}`;
@@ -180,10 +158,10 @@ const Hero = () => {
                 </h2>
               </div>
 
-              {/* CTA para MÓVIL Y TABLET (hasta 1024px) */}
+              {/* CTA para MÓVIL Y TABLET (CON <Link>) */}
               <div className="col-span-12 md:col-start-9 md:col-span-4 lg:hidden">
                 <div className="flex justify-start md:justify-end w-full mt-0 md:mt-0">
-                  <div className="cursor-pointer text-left group relative w-full max-w-[250px]" onMouseEnter={() => setIsHovering(true)} onMouseLeave={() => setIsHovering(false)} onClick={handleCalculatorClick}>
+                  <Link href="/calculadora" className="text-left group relative w-full max-w-[250px]" onMouseEnter={() => setIsHovering(true)} onMouseLeave={() => setIsHovering(false)}>
                     <div className="relative p-4">
                       <StaticBorder />
                       <div className="absolute inset-[6px] transition-colors duration-300 bg-transparent group-hover:bg-primary"></div>
@@ -193,14 +171,14 @@ const Hero = () => {
                         <div className="overflow-hidden mb-0 -mt-0.5"><SlideTextOnHover originalText={<span className="text-gray-600 font-archivo font-normal block">TU PROYECTO</span>} hoverText={<span className="text-dark font-archivo font-normal block">TU PROYECTO</span>} /></div>
                       </div>
                     </div>
-                  </div>
+                  </Link>
                 </div>
               </div>
 
-              {/* CTA para DESKTOP (desde 1024px en adelante) */}
+              {/* CTA para DESKTOP (CON <Link>) */}
               <div className="hidden lg:block lg:col-start-10 lg:col-span-3 xl:col-start-11 xl:col-span-2">
                 <div className="flex justify-end w-full">
-                  <div className="cursor-pointer text-left group relative overflow-hidden w-full max-w-[250px]" onMouseEnter={() => setIsHovering(true)} onMouseLeave={() => setIsHovering(false)} onClick={handleContactClick}>
+                  <Link href="/contacto" className="cursor-pointer text-left group relative overflow-hidden w-full max-w-[250px]" onMouseEnter={() => setIsHovering(true)} onMouseLeave={() => setIsHovering(false)}>
                     <div className="relative p-4">
                       <StaticBorder />
                       <div className="absolute inset-[6px] transition-colors duration-300 bg-transparent group-hover:bg-primary"></div>
@@ -211,7 +189,7 @@ const Hero = () => {
                         <div className="overflow-hidden -mt-1"><SlideTextOnHover originalText={<span className="text-gray-600 font-archivo font-normal block">QUE IMPACTAN</span>} hoverText={<span className="text-dark font-archivo font-normal block">QUE IMPACTAN</span>} /></div>
                       </div>
                     </div>
-                  </div>
+                  </Link>
                 </div>
               </div>
             </div>
@@ -219,17 +197,17 @@ const Hero = () => {
           <div className={`border-t border-t-gray-800 mt-20 md:mt-20 lg:mt-12 xl:mt-20 w-full ${isTablet ? 'lg:mt-16' : ''}`}>
             <div className="grid grid-cols-12 pt-2 md:pt-4 pb-2 md:pb-6 gap-8">
               <div className="col-span-2 self-end"><span className="text-gray-700 font-archivo text-sm lg:text-xs 2xl:text-sm">/</span></div>
-              <div className="hidden md:flex col-span-2 col-start-7 self-end justify-start"><ScrollText /></div>
+              <div className="hidden md:flex col-span-2 col-start-7 self-end justify-start"><ScrollText isMobile={isMobile} /></div>
               <div className="col-span-10 md:col-span-2 md:col-start-11 self-end flex justify-end items-center gap-1.5">
                 {isMobile ? (
                   <div className="flex items-center space-x-3 text-xs text-gray-700 font-display">
-                    <ScrollText /><span className="mx-1">•</span><span>©2025</span>
+                    <ScrollText isMobile={isMobile} /><span className="mx-1">•</span><span>©2025</span>
                   </div>
                 ) : (
                   <>
-                    <SocialIcon icon={<FaInstagram className="text-[0.9em] text-gray-700" />} hoverIcon={<FaInstagram className="text-[0.9em] text-gray-700" />} />
-                    <SocialIcon icon={<FaFacebookF className="text-[0.8em] text-gray-700" />} hoverIcon={<FaFacebookF className="text-[0.8em] text-gray-700" />} />
-                    <SocialIcon icon={<FaBehance className="text-[0.9em] text-gray-700" />} hoverIcon={<FaBehance className="text-[0.9em] text-gray-700" />} />
+                    <SocialIcon isMobile={isMobile} icon={<FaInstagram className="text-[0.9em] text-gray-700" />} hoverIcon={<FaInstagram className="text-[0.9em] text-gray-700" />} />
+                    <SocialIcon isMobile={isMobile} icon={<FaFacebookF className="text-[0.8em] text-gray-700" />} hoverIcon={<FaFacebookF className="text-[0.8em] text-gray-700" />} />
+                    <SocialIcon isMobile={isMobile} icon={<FaBehance className="text-[0.9em] text-gray-700" />} hoverIcon={<FaBehance className="text-[0.9em] text-gray-700" />} />
                   </>
                 )}
               </div>
