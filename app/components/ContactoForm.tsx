@@ -4,29 +4,12 @@ import React, { useState, useRef, useEffect } from "react";
 import { useGSAP } from "@gsap/react";
 import { gsap, ScrollTrigger } from "@/lib/gsapInit";
 import Link from "next/link";
-import dynamic from "next/dynamic";
+
 import SlideTextOnHover from "./SlideTextOnHover";
 import emailjs from '@emailjs/browser';
+import ArrowAni from "./ArrowAni";
 
-// Importación dinámica optimizada del componente ArrowAni
-const ArrowAni = dynamic(() => import("./ArrowAni"), {
-  ssr: false,
-  loading: () => (
-    <div className="w-full h-full flex items-center justify-center bg-gray-900/10 rounded-lg">
-      <div className="animate-pulse flex flex-col items-center">
-        {/* Placeholder más elaborado que simula la flecha 3D */}
-        <div className="relative">
-          <div className="w-20 h-20 border-2 border-gray-600 rounded-full flex items-center justify-center mb-2">
-            <div className="w-10 h-10 bg-gradient-to-br from-gray-600 to-gray-700 rounded-full opacity-60 animate-pulse"></div>
-          </div>
-          <div className="absolute -top-1 -right-1 w-6 h-6 bg-gray-600 rounded-full opacity-40"></div>
-          <div className="absolute -bottom-1 -left-1 w-4 h-4 bg-gray-700 rounded-full opacity-30"></div>
-        </div>
-        <div className="text-xs text-gray-600 animate-pulse">Cargando modelo 3D...</div>
-      </div>
-    </div>
-  )
-});
+
 
 const ContactoForm: React.FC = () => {
   const [formData, setFormData] = useState({
