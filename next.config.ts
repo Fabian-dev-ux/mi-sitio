@@ -1,3 +1,5 @@
+// next.config.js (VERSIÓN FINAL Y OPTIMIZADA)
+
 import type { NextConfig } from 'next'
 
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
@@ -8,7 +10,7 @@ const nextConfig: NextConfig = {
   output: 'export',
   trailingSlash: true,
   
-  // Optimizaciones de imágenes (aunque esté unoptimized, estas configuraciones ayudan)
+  // Optimizaciones de imágenes se mantienen
   images: {
     unoptimized: true,
     formats: ['image/webp', 'image/avif'],
@@ -16,55 +18,28 @@ const nextConfig: NextConfig = {
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
   
-  // Configuración del compilador para mejor optimización
+  // Configuración del compilador se mantiene
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production',
-    // Elimina imports no utilizados
     reactRemoveProperties: process.env.NODE_ENV === 'production',
   },
   
-  // Optimizaciones de webpack
-  webpack: (config, { isServer }) => {
-    // Optimización para sitios estáticos
-    if (!isServer) {
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        fs: false,
-        net: false,
-        tls: false,
-      }
-    }
-    
-    // Optimización de chunks
-    config.optimization = {
-      ...config.optimization,
-      splitChunks: {
-        chunks: 'all',
-        cacheGroups: {
-          vendor: {
-            test: /[\\/]node_modules[\\/]/,
-            name: 'vendors',
-            chunks: 'all',
-          },
-        },
-      },
-    }
-    
-    return config
-  },
-  
-  // Configuración para optimizar el bundle
+  // ===================================================================
+  //  SECCIÓN 'webpack' ELIMINADA
+  //  Hemos quitado la configuración personalizada de 'splitChunks'
+  //  para permitir que la estrategia por defecto de Next.js, que sí 
+  //  respeta 'next/dynamic', tome el control.
+  // ===================================================================
+
+  // El resto de la configuración se mantiene
   poweredByHeader: false,
   reactStrictMode: true,
   
-  // Configuración específica para export estático
   distDir: 'out',
   
   serverExternalPackages: ["sharp"],
   
   experimental: {
-    // Optimización CSS removida para evitar dependencias faltantes
-    // optimizeCss: true, // Comentado - causaba error con critters
     scrollRestoration: true,
     turbo: {
       // Configuración de Turbopack
