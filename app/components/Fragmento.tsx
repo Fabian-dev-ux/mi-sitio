@@ -1,116 +1,132 @@
-import React, { useRef, useMemo, useEffect } from 'react'
-import { Canvas, useLoader, useThree, useFrame } from '@react-three/fiber'
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader'
-import { Mesh, Group, BufferGeometry, Object3D } from 'three'
+// app/components/Fragmento.tsx (Versión Optimizada para Rendimiento)
+'use client';
+import React, { useRef, useMemo, useEffect } from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
 import { 
   Environment, 
-  MeshTransmissionMaterial, 
-  Center 
-} from '@react-three/drei'
+  Center,
+  useGLTF 
+} from '@react-three/drei';
+import { Mesh, Group, BufferGeometry, Object3D } from 'three';
 
-// Model component with realistic crystal effect and random rotation
-const Model = () => {
-  const gltf = useLoader(GLTFLoader, '/models/fragmento.glb')
-  const { camera } = useThree()
-  const modelRef = useRef<Mesh>(null)
-  const groupRef = useRef<Group>(null)
+// Pre-cargar el modelo para una experiencia más rápida
+useGLTF.preload('/models/cruz-draco.glb');
+
+// ========================================================================
+// Componente Model Optimizado
+// ========================================================================
+const Model = ({ isMobile }: { isMobile: boolean }) => {
+  const gltf = useGLTF('/models/cruz-draco.glb');
+  const groupRef = useRef<Group>(null);
   
-  // Random rotation speeds for each axis
   const rotationSpeeds = useMemo(() => ({
-    x: (Math.random() - 0.5) * 0.02, // Random speed between -0.01 and 0.01
-    y: (Math.random() - 0.5) * 0.02,
-    z: (Math.random() - 0.5) * 0.02
-  }), [])
-  
-  // Transmission material for crystal effect
-  const transmissionMaterial = useMemo(() => (
-    <MeshTransmissionMaterial
-      thickness={0.1}
-      roughness={0.15}
-      transmission={1}
-      ior={1.75}
-      chromaticAberration={0.5}
-      backside={true}
-      color="#ffffff"
-      samples={3}
-      resolution={1024}
-      anisotropicBlur={0.1}
-      temporalDistortion={0.1}
-    />
-  ), []);
+    x: (Math.random() - 0.5) * 0.01,
+    y: (Math.random() - 0.5) * 0.01,
+    z: (Math.random() - 0.5) * 0.01
+  }), []);
 
-  // Set camera position for frontal view
-  useEffect(() => {
-    camera.position.set(0, 0, 5)
-    camera.lookAt(0, 0, 0)
-  }, [camera])
-
-  // Apply the model's geometry to our mesh
-  useEffect(() => {
-    let targetGeometry: BufferGeometry | null = null;
-    
-    gltf.scene.traverse((object: Object3D) => {
-      if (object instanceof Mesh && object.geometry) {
-        targetGeometry = object.geometry;
+  const modelGeometry = useMemo(() => {
+    let geometry: BufferGeometry | null = null;
+    gltf.scene.traverse((child: Object3D) => {
+      if (child instanceof Mesh && !geometry) {
+        geometry = child.geometry;
       }
     });
-    
-    if (targetGeometry && modelRef.current) {
-      modelRef.current.geometry = targetGeometry;
-    }
+    return geometry;
   }, [gltf.scene]);
 
-  // Animation loop for random rotation
-  useFrame((state, delta) => {
+  // OPTIMIZACIÓN: Material memoizado con configuración optimizada
+  const optimizedMaterial = useMemo(() => {
+    return {
+      transmission: isMobile ? 0.8 : 1, // Menos transmisión en móvil
+      roughness: isMobile ? 0.2 : 0.1,  // Más rugosidad = menos reflejos costosos
+      thickness: isMobile ? 0.05 : 0.1, // Menos grosor para cálculos más simples
+      ior: 1.5, // IOR más bajo = cálculos más simples
+      color: "#ffffff",
+      // CLAVE: Deshabilitar características costosas en móvil
+      clearcoat: isMobile ? 0 : 0.1,
+      clearcoatRoughness: 0.1,
+      // Optimizar sombras
+      transparent: true,
+      opacity: 0.95
+    };
+  }, [isMobile]);
+
+  useFrame(() => {
     if (groupRef.current) {
-      groupRef.current.rotation.x += rotationSpeeds.x
-      groupRef.current.rotation.y += rotationSpeeds.y
-      groupRef.current.rotation.z += rotationSpeeds.z
+      groupRef.current.rotation.x += rotationSpeeds.x;
+      groupRef.current.rotation.y += rotationSpeeds.y;
+      groupRef.current.rotation.z += rotationSpeeds.z;
     }
-  })
+  });
+
+  if (!modelGeometry) {
+    return null;
+  }
 
   return (
     <Center>
-      <group ref={groupRef} scale={1.4}>
-        <mesh ref={modelRef}>
-          {transmissionMaterial}
+      <group ref={groupRef} scale={0.3}>
+        <mesh geometry={modelGeometry}>
+          <meshPhysicalMaterial
+            {...optimizedMaterial}
+          />
         </mesh>
       </group>
     </Center>
-  )
-}
+  );
+};
 
-// Main component
-const Fragmento = () => {
+// ========================================================================
+// Componente Principal Optimizado
+// ========================================================================
+const Fragmento = ({ isMobile }: { isMobile: boolean }) => {
   return (
     <div className="w-full h-full bg-black relative">
       <Canvas
         camera={{ position: [0, 0, 5], fov: 35 }}
         gl={{ 
           alpha: false,
-          antialias: true,
+          antialias: isMobile ? false : true, // Sin antialias en móvil
           powerPreference: "high-performance",
-          preserveDrawingBuffer: true
+          // OPTIMIZACIONES ADICIONALES:
+          stencil: false,
+          depth: true,
+          logarithmicDepthBuffer: false
         }}
-        dpr={[1, 2]}
+        dpr={isMobile ? [1, 1.25] : [1, 1.5]} // Menor DPR en móvil
+        performance={{ min: 0.8 }} // Auto-reduce calidad si FPS baja
       >
         <color attach="background" args={['#000000']} />
         
-        {/* Iluminación para el efecto cristalino */}
-        <ambientLight intensity={0.5} />
-        <directionalLight position={[5, 5, 5]} intensity={1.5} color="#FFFFFF" />
-        <directionalLight position={[-5, -5, -5]} intensity={0.5} color="#FFFFFF" />
+        {/* ILUMINACIÓN OPTIMIZADA */}
+        <ambientLight intensity={isMobile ? 0.4 : 0.5} />
+        <directionalLight 
+          position={[5, 5, 5]} 
+          intensity={isMobile ? 1.2 : 1.5} 
+          color="#FFFFFF"
+          castShadow={false} // Sin sombras para mejor rendimiento
+        />
+        <directionalLight 
+          position={[-5, -5, -5]} 
+          intensity={isMobile ? 0.3 : 0.5} 
+          color="#FFFFFF"
+          castShadow={false}
+        />
         
-        {/* Environment map para reflecciones realistas */}
-        <Environment preset="city" />
+        {/* ENVIRONMENT OPTIMIZADO */}
+        <Environment 
+          preset="city"
+          resolution={isMobile ? 256 : 512} // AQUÍ: Resolución más baja en móvil
+          background={false} // No usar como fondo para mejor rendimiento
+        />
         
-        {/* Modelo con suspense para carga */}
         <React.Suspense fallback={null}>
-          <Model />
+          <Model isMobile={isMobile} />
         </React.Suspense>
       </Canvas>
     </div>
-  )
-}
+  );
+};
 
-export default Fragmento
+export default Fragmento;
