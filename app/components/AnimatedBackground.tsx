@@ -1,11 +1,11 @@
 import React, { useRef, useState, useCallback, useEffect, useMemo } from 'react';
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
-import { Environment, useGLTF, MeshTransmissionMaterial } from '@react-three/drei';
+import { Environment, useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 
 type Breakpoint = '2xl' | 'lg' | 'mobile';
 
-// Hook personalizado para detectar breakpoints
+// Hook personalizado para detectar breakpoints (sin cambios)
 function useBreakpoint() {
   const [breakpoint, setBreakpoint] = useState<Breakpoint>('2xl');
 
@@ -25,12 +25,13 @@ function useBreakpoint() {
   return breakpoint;
 }
 
-// Función helper para verificar si un objeto es un Mesh
 function isMesh(object: THREE.Object3D): object is THREE.Mesh {
   return object instanceof THREE.Mesh && object.geometry !== undefined;
 }
 
-// Componente de la escena 3D con todas las optimizaciones
+// ========================================================================
+// COMPONENTE OPTIMIZADO CON MeshPhysicalMaterial
+// ========================================================================
 function Scene() {
   const { viewport } = useThree();
   const { width, height } = viewport;
@@ -63,10 +64,31 @@ function Scene() {
     cono: Object.values(conoNodes).find(isMesh)?.geometry
   }), [cruzNodes, conoNodes]);
 
-  const materialProps = useMemo(() => ({
-    glass: { roughness: 0.15, transmission: 1, thickness: 1.5, ior: 1.7, metalness: 0, color: "white" },
-    cono: { roughness: 0.15, transmission: 1, thickness: 1.5, ior: 1.7, metalness: 0, color: "white" }
-  }), []);
+  // 🟢 MATERIALES IDÉNTICOS AL FRAGMENTO (SIN DIFERENCIAS POR DISPOSITIVO)
+  const materialProps = useMemo(() => {
+    return {
+      cruz: {
+        transmission: 1.0,
+        roughness: 0.1,
+        thickness: 0.1,
+        ior: 1.5,
+        metalness: 0,
+        color: "#ffffff",
+        clearcoat: 0.1,
+        clearcoatRoughness: 0.1
+      },
+      cono: {
+        transmission: 1.0,
+        roughness: 0.1,
+        thickness: 0.1,
+        ior: 1.5,
+        metalness: 0,
+        color: "#ffffff",
+        clearcoat: 0.1,
+        clearcoatRoughness: 0.1
+      }
+    };
+  }, []); // ✨ Sin dependencia de breakpoint
 
   const scales = useMemo(() => {
     const configs = {
@@ -77,7 +99,7 @@ function Scene() {
     return configs[breakpoint] || configs['2xl'];
   }, [breakpoint]);
 
-  // Lógica de movimiento y animación (sin cambios)
+  // Eventos de mouse optimizados (sin cambios)
   useEffect(() => {
     let rafId: number;
     const handleMouseMove = (event: MouseEvent) => {
@@ -163,45 +185,48 @@ function Scene() {
 
   return (
     <>
+      {/* 🟢 CRUZ CON MeshPhysicalMaterial OPTIMIZADO */}
       <mesh ref={cruzRef} position={positions.cruz as [number, number, number]} scale={scales.cruz} frustumCulled={true}>
         {geometries.cruz ? <primitive object={geometries.cruz} /> : <icosahedronGeometry args={[1, 0]} />}
-        
-        <MeshTransmissionMaterial
-          {...materialProps.glass}
-          resolution={256}
-          samples={4}      
-          background={new THREE.Color('#000000')}
-        />
+        <meshPhysicalMaterial {...materialProps.cruz} />
       </mesh>
       
+      {/* 🟢 CONO CON MeshPhysicalMaterial OPTIMIZADO */}
       {breakpoint !== 'mobile' && (
         <mesh ref={conoRef} position={positions.cono as [number, number, number]} scale={scales.cono} frustumCulled={true}>
           {geometries.cono ? <primitive object={geometries.cono} /> : <coneGeometry args={[2, 3, 3]} />}
-          
-          <MeshTransmissionMaterial
-            {...materialProps.cono}
-            resolution={256}
-            samples={4}
-            background={new THREE.Color('#000000')}
-          />
+          <meshPhysicalMaterial {...materialProps.cono} />
         </mesh>
       )}
     </>
   );
 }
 
-// Componente principal que envuelve el Canvas (sin cambios)
+// 🟢 CANVAS OPTIMIZADO
 const AnimatedBackground = React.memo(() => {
+  const breakpoint = useBreakpoint();
+  const isMobile = breakpoint === 'mobile';
+  
   return (
     <Canvas 
       orthographic
       camera={{ position: [0, 0, 20], zoom: 50 }}
-      dpr={[1, 1.5]}
-      performance={{ min: 0.5 }}
+      dpr={isMobile ? [1, 1.25] : [1, 1.5]}
+      performance={{ min: 0.6 }}
+      gl={{ 
+        alpha: false,
+        antialias: !isMobile,
+        powerPreference: "high-performance",
+        stencil: false
+      }}
       style={{ width: '100%', height: '100%' }}
     >
       <color attach="background" args={['black']} />
-      <Environment preset="city" />
+      <Environment 
+        preset="city" 
+        resolution={isMobile ? 256 : 512}
+        background={false}
+      />
       <Scene />
     </Canvas>
   );
