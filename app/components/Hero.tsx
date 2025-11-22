@@ -1,7 +1,8 @@
+// app/components/Hero.tsx (Versión Final, Completa y Correcta)
 "use client";
 import { FaInstagram, FaFacebookF, FaBehance } from 'react-icons/fa';
 import { useState, useEffect } from 'react';
-import Link from 'next/link'; // Mantenemos el uso de Link
+import Link from 'next/link';
 import HeroBackground from './HeroBackground';
 import SlideTextOnHover from './SlideTextOnHover';
 import Image from 'next/image';
@@ -109,6 +110,20 @@ const StaticBorder = () => {
 
 // --- COMPONENTE PRINCIPAL `Hero` ---
 const Hero = () => {
+  // ========================================================================
+  // CAMBIO 1: Añadir un estado para controlar el renderizado del fondo.
+  // ========================================================================
+  const [showHeavyBackground, setShowHeavyBackground] = useState(false);
+
+  // ========================================================================
+  // CAMBIO 2: Usar useEffect para cambiar ese estado DESPUÉS de que el
+  //           componente se haya montado en el navegador.
+  // ========================================================================
+  useEffect(() => {
+    // Esto se ejecuta solo una vez en el lado del cliente.
+    setShowHeavyBackground(true);
+  }, []);
+
   const [isHovering, setIsHovering] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
@@ -131,7 +146,15 @@ const Hero = () => {
   return (
     <section className={`${heroHeightClasses} ${heroSpacingClasses} bg-dark text-gray-400 relative overflow-hidden px-4 md:px-6 lg:px-8 xl:px-10 2xl:px-20`}>
       <h1 className="sr-only">Convertimos Ideas Locas en Experiencias Digitales Memorables</h1>
-      <div className="absolute inset-0 z-0"><HeroBackground /></div>
+      
+      <div className="absolute inset-0 z-0">
+        {/* ======================================================================== */}
+        {/* CAMBIO 3: Renderizar el fondo 3D solo si el estado es 'true'. */}
+        {/* En la carga inicial, esto no se renderizará, evitando el bloqueo. */}
+        {/* ======================================================================== */}
+        {showHeavyBackground && <HeroBackground />}
+      </div>
+
       <div className="relative z-10 w-full h-full grid grid-rows-[auto_auto_1fr] md:grid-rows-[1fr_1fr_2fr] lg:grid-rows-[1fr_1fr_1.4fr] overflow-x-hidden">
         <div className={`md:min-h-0 h-36 md:h-20 lg:h-auto border-t border-gray-800 md:border-t-0 mt-10 relative ${isTablet ? 'lg:h-20' : ''}`}></div>
         <div className={`flex items-start py-4 md:pt-6 h-32 md:h-0 lg:h-auto ${isTablet ? 'lg:h-24 lg:py-2' : ''}`}>
