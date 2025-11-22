@@ -2,45 +2,62 @@
 'use client';
 
 import React from 'react';
-// 1. Importar 'dynamic' de Next.js para la carga diferida
 import dynamic from 'next/dynamic';
 
-// 2. Mantener todas las importaciones estáticas para los componentes que se cargan al inicio
-import Hero from './components/Hero';
+// ===================================================================
+//  COMPONENTES LIGEROS - Se importan de forma normal (estática)
+// ===================================================================
 import Servicios from './components/Servicios';
-import Proceso from './components/Proceso';
 import Marquee from './components/Marquee';
-import Proyectos from './components/Proyectos';
-import Antagonik from './components/Antagonik';
 import Vision from './components/Vision';
 
-// 3. Crear una versión dinámica del componente VideoReel
+// ===================================================================
+//  COMPONENTES PESADOS - Se importan con carga dinámica
+// ===================================================================
+
+const Hero = dynamic(() => import('./components/Hero'), {
+  ssr: false,
+  loading: () => <div className="h-screen w-full bg-black" /> 
+});
+
 const VideoReel = dynamic(() => import('./components/VideoReel'), {
-  // ssr: false es crucial aquí porque tu componente usa 'window' y lógica del lado del cliente.
-  ssr: false, 
-  
-  // Opcional pero recomendado: Muestra un placeholder mientras el componente real se carga.
-  // Esto evita que la página "salte" (Layout Shift) y mejora la experiencia del usuario.
-  // Usamos una clase que imita la altura del componente para mantener el flujo de la página.
-  loading: () => <div className="h-96 md:h-[32rem] lg:h-screen bg-dark" />,
+  ssr: false,
+  loading: () => <div className="h-96 md:h-[32rem] lg:h-screen bg-dark" />
+});
+
+const Proyectos = dynamic(() => import('./components/Proyectos'), {
+  // Un placeholder simple es suficiente si no es visible al inicio
+  loading: () => <div className="h-screen w-full bg-dark" /> 
+});
+
+const Proceso = dynamic(() => import('./components/Proceso'), {
+  ssr: false,
+  loading: () => <div className="h-screen w-full bg-dark" /> 
+});
+
+const Antagonik = dynamic(() => import('./components/Antagonik'), {
+  ssr: false,
+  loading: () => <div className="h-screen w-full bg-dark" /> 
 });
 
 
 export default function Page() {
   return (
     <>
+      {/* Componentes pesados (se cargarán justo cuando React intente renderizarlos) */}
       <Hero />
-      
-      {/* 4. Aquí se renderizará la versión dinámica de VideoReel. */}
-      {/*    Al principio mostrará el 'loading' placeholder, y una vez cargado, */}
-      {/*    se reemplazará por el componente real. */}
       <VideoReel />
-      
+
+      {/* Componentes ligeros (ya estaban en el bundle inicial) */}
       <Servicios /> 
       <Marquee />
+
+      {/* Más componentes pesados */}
       <Proyectos />
       <Proceso />
       <Antagonik />
+      
+      {/* Componente ligero final */}
       <Vision />
     </>
   );
