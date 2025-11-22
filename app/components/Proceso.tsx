@@ -469,7 +469,7 @@ const ProcesoSectionSticky: React.FC = () => {
             }}
           >
             
-            {/* FONDO 3D - FRAGMENTO CON MANEJO DE ESTADOS */}
+          {/* FONDO 3D - FRAGMENTO CON MANEJO DE ESTADOS */}
             <div className="absolute top-1/2 left-[50px] w-[500px] h-[500px] -translate-y-1/2 z-[1] pointer-events-none opacity-40">
               {!should3DLoad ? (
                 // Estado inicial - sin placeholder visible
@@ -480,9 +480,9 @@ const ProcesoSectionSticky: React.FC = () => {
                   <div className="text-gray-600 text-sm opacity-50">Cargando modelo 3D...</div>
                 </div>
               ) : (
-                // Modelo 3D cargado
+                // Modelo 3D cargado - FIXED: Pass isMobile prop
                 <div className="w-full h-full">
-                  <Fragmento />
+                  <Fragmento isMobile={isMobile} />
                 </div>
               )}
             </div>
